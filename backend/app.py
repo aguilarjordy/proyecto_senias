@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import os, json, numpy as np
+import os, csv
 from ml.trainer import train_model, load_model
 from ml.predictor import predict_landmark
 
@@ -8,8 +8,20 @@ app = Flask(__name__)
 CORS(app)
 
 DATA_DIR = "data"
+DATA_FILE = os.path.join(DATA_DIR, "landmarks.csv")
+MODEL_PATH = "model.pkl"
+
 os.makedirs(DATA_DIR, exist_ok=True)
 
+# 🔹 Crear archivo CSV si no existe
+if not os.path.exists(DATA_FILE):
+    with open(DATA_FILE, mode="w", newline="") as f:
+        writer = csv.writer(f)
+        # 21 puntos x 3 coordenadas = 63 features
+        header = [f"f{i}" for i in range(63)] + ["label"]
+        writer.writerow(header)
+
+# Cargar modelo si existe
 model = load_model()
 
 # Guardar muestra
@@ -22,45 +34,50 @@ def save_landmark():
     if not label or not landmarks:
         return jsonify({"error": "Etiqueta o landmarks faltantes"}), 400
 
-    file_path = os.path.join(DATA_DIR, f"{label}.json")
-    if os.path.exists(file_path):
-        with open(file_path, "r") as f:
-            samples = json.load(f)
-    else:
-        samples = []
+    # Contar muestras existentes de esta etiqueta
+    count = 0
+    with open(DATA_FILE, mode="r") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            if row["label"] == label:
+                count += 1
 
-    if len(samples) >= 100:
+    if count >= 100:
         return jsonify({"message": f"❌ Ya tienes 100 muestras para '{label}'"}), 400
 
-    samples.append(landmarks)
+    # 🔹 Aplanar landmarks antes de guardar
+    landmarks_flat = []
+    for lm in landmarks:
+        landmarks_flat.extend([lm["x"], lm["y"], lm["z"]])
 
-    with open(file_path, "w") as f:
-        json.dump(samples, f)
+    # Guardar nueva muestra
+    with open(DATA_FILE, mode="a", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(landmarks_flat + [label])
 
-    return jsonify({"message": f"✅ Muestra guardada para '{label}'", "total": len(samples)})
+    return jsonify({"message": f"✅ Muestra guardada para '{label}'", "total": count + 1})
 
 # Progreso
 @app.route("/progress", methods=["GET"])
 def progress():
     result = {}
-    for file in os.listdir(DATA_DIR):
-        if file.endswith(".json"):
-            label = file.replace(".json", "")
-            with open(os.path.join(DATA_DIR, file), "r") as f:
-                samples = json.load(f)
-            result[label] = len(samples)
+    with open(DATA_FILE, mode="r") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            lbl = row["label"]
+            result[lbl] = result.get(lbl, 0) + 1
     return jsonify(result)
 
-# Entrenar modelo
+# Entrenar
 @app.route("/train", methods=["POST"])
 def train():
     global model
     try:
-        result = train_model()
-        model = load_model()
+        result = train_model(DATA_FILE, MODEL_PATH)
+        model = load_model(MODEL_PATH)
         return jsonify({"message": "✅ Modelo entrenado", **result})
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        return jsonify({"error": str(e)}), 500
 
 # Predecir
 @app.route("/predict", methods=["POST"])
@@ -72,11 +89,41 @@ def predict():
     if not landmarks:
         return jsonify({"error": "Faltan landmarks"}), 400
 
+    if model is None:
+        return jsonify({"error": "Modelo no entrenado aún"}), 400
+
+    # 🔹 Aplanar landmarks para la predicción
+    landmarks_flat = []
+    for lm in landmarks:
+        landmarks_flat.extend([lm["x"], lm["y"], lm["z"]])
+
     try:
-        result = predict_landmark(model, landmarks)
+        result = predict_landmark(model, landmarks_flat)
         return jsonify(result)
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        return jsonify({"error": str(e)}), 500
+
+# Resetear todo
+@app.route("/reset", methods=["POST"])
+def reset():
+    global model
+    try:
+        # borrar dataset
+        if os.path.exists(DATA_FILE):
+            os.remove(DATA_FILE)
+        with open(DATA_FILE, mode="w", newline="") as f:
+            writer = csv.writer(f)
+            header = [f"f{i}" for i in range(63)] + ["label"]
+            writer.writerow(header)
+
+        # borrar modelo
+        if os.path.exists(MODEL_PATH):
+            os.remove(MODEL_PATH)
+
+        model = None
+        return jsonify({"message": "🔄 Datos y modelo reseteados"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(debug=True)

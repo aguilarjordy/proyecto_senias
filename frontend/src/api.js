@@ -1,6 +1,5 @@
-const API_URL = "http://localhost:5000"; // cambia si lo subes
+const API_URL = "http://127.0.0.1:5000";
 
-// Guardar landmarks
 export async function saveLandmark(label, landmarks) {
   const res = await fetch(`${API_URL}/save_landmark`, {
     method: "POST",
@@ -10,26 +9,26 @@ export async function saveLandmark(label, landmarks) {
   return res.json();
 }
 
-// Ver progreso
 export async function getProgress() {
   const res = await fetch(`${API_URL}/progress`);
   return res.json();
 }
 
-// Entrenar modelo
 export async function trainModel() {
-  const res = await fetch(`${API_URL}/train`, {
-    method: "POST",
-  });
+  const res = await fetch(`${API_URL}/train`, { method: "POST" });
   return res.json();
 }
 
-// Predecir
-export async function predictLandmark(landmarks) {
+export async function predict(landmarks) {
   const res = await fetch(`${API_URL}/predict`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ landmarks }),
   });
+  return res.json();
+}
+
+export async function resetAll() {
+  const res = await fetch(`${API_URL}/reset`, { method: "POST" });
   return res.json();
 }

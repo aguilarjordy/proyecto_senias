@@ -1,20 +1,17 @@
-import numpy as np
-import joblib
-import os
-
-MODEL_PATH = "model.pkl"
-
-def load_model():
-    if os.path.exists(MODEL_PATH):
-        return joblib.load(MODEL_PATH)
-    return None
-
 def predict_landmark(model, landmarks):
-    if model is None:
-        raise ValueError("El modelo no está entrenado")
+    """
+    landmarks: lista con 63 floats (21 puntos * 3 coordenadas)
+    """
+    if not model:
+        return {"error": "Modelo no cargado"}
 
-    X = np.array(landmarks).flatten().reshape(1, -1)
-    prediction = model.predict(X)[0]
-    proba = model.predict_proba(X).max()
+    prediction = model.predict([landmarks])[0]
+    proba = model.predict_proba([landmarks])[0]
 
-    return {"prediction": prediction, "confidence": float(proba)}
+    # probabilidad máxima y su clase
+    confidence = max(proba)
+
+    return {
+        "prediction": prediction,
+        "confidence": float(confidence)
+    }

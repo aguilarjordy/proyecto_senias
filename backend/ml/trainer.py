@@ -1,46 +1,30 @@
-import os
-import json
-import numpy as np
+import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 import joblib
 
-DATA_DIR = "data"
-MODEL_PATH = "model.pkl"
+def train_model(data_file="data/landmarks.csv", model_path="model.pkl"):
+    df = pd.read_csv(data_file)
 
-def train_model():
-    X, y = [], []
+    if df.empty or len(df) < 5:
+        raise ValueError("No hay suficientes datos para entrenar")
 
-    # Cargar datos
-    for file in os.listdir(DATA_DIR):
-        if file.endswith(".json"):
-            label = file.replace(".json", "")
-            with open(os.path.join(DATA_DIR, file), "r") as f:
-                samples = json.load(f)
-            for s in samples:
-                X.append(np.array(s).flatten())
-                y.append(label)
+    X = df.drop("label", axis=1).values
+    y = df["label"].values
 
-    if not X:
-        raise ValueError("No hay datos para entrenar")
-
-    X = np.array(X)
-    y = np.array(y)
-
-    # Train/test split
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42
-    )
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
     clf = RandomForestClassifier(n_estimators=100, random_state=42)
     clf.fit(X_train, y_train)
+
     acc = clf.score(X_test, y_test)
 
-    joblib.dump(clf, MODEL_PATH)
+    joblib.dump(clf, model_path)
 
-    return {"accuracy": acc, "samples": len(y)}
+    return {"accuracy": acc, "samples": len(df)}
 
-def load_model():
-    if os.path.exists(MODEL_PATH):
-        return joblib.load(MODEL_PATH)
-    return None
+def load_model(model_path="model.pkl"):
+    try:
+        return joblib.load(model_path)
+    except:
+        return None

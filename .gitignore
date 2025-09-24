@@ -1,0 +1,16 @@
+# Ignorar venv dentro de backend
+backend/venv/
+
+# Archivos de Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Archivos de entorno
+.env
+*.env
+
+# Archivos de node (si usas React/Vite en frontend)
+frontend/node_modules/
+dist/

@@ -5,7 +5,11 @@ from ml.trainer import train_model, load_model
 from ml.predictor import predict_landmark
 
 app = Flask(__name__)
-CORS(app)
+# Permitir múltiples URLs de frontends
+CORS(app, resources={r"/*": {"origins": [
+    "http://localhost:5173",       # frontend local
+    "https://senias-main-front.onrender.com"  # frontend de main en Render 
+]}})
 
 DATA_DIR = "data"
 DATA_FILE = os.path.join(DATA_DIR, "landmarks.csv")

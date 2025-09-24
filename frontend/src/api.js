@@ -1,4 +1,4 @@
-const API_URL = "http://127.0.0.1:5000";
+const API_URL = "https://senias-main-back.onrender.com";
 
 export async function saveLandmark(label, landmarks) {
   const res = await fetch(`${API_URL}/save_landmark`, {

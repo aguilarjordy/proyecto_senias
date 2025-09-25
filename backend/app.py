@@ -8,7 +8,7 @@ app = Flask(__name__)
 # Permitir múltiples URLs de frontends
 CORS(app, resources={r"/*": {"origins": [
     "http://localhost:5173",       # frontend local
-    "https://senias-main-front.onrender.com"  # frontend de main en Render 
+    "https://senias-main-front.onrender.com",  # frontend de main en Render 
     "https://senias-edu-front.onrender.com"  # frontend de edu en render
 ]}})
 

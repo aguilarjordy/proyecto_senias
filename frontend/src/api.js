@@ -2,36 +2,52 @@
 const API_URL = import.meta.env.VITE_API_URL;
 
 
+// Función auxiliar para manejar todas las peticiones
+async function apiRequest(endpoint, options = {}) {
+  try {
+    const res = await fetch(`${API_URL}${endpoint}`, {
+      headers: { "Content-Type": "application/json" },
+      ...options,
+    });
 
-export async function saveLandmark(label, landmarks) {
-  const res = await fetch(`${API_URL}/save_landmark`, {
+    if (!res.ok) {
+      throw new Error(`Error ${res.status}: ${res.statusText}`);
+    }
+
+    return await res.json();
+  } catch (err) {
+    console.error("API error:", err.message);
+    return { error: err.message };
+  }
+}
+
+// Guardar landmarks
+export function saveLandmark(label, landmarks) {
+  return apiRequest("/save_landmark", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ label, landmarks }),
   });
-  return res.json();
 }
 
-export async function getProgress() {
-  const res = await fetch(`${API_URL}/progress`);
-  return res.json();
+// Obtener progreso
+export function getProgress() {
+  return apiRequest("/progress");
 }
 
-export async function trainModel() {
-  const res = await fetch(`${API_URL}/train`, { method: "POST" });
-  return res.json();
+// Entrenar modelo
+export function trainModel() {
+  return apiRequest("/train", { method: "POST" });
 }
 
-export async function predict(landmarks) {
-  const res = await fetch(`${API_URL}/predict`, {
+// Predecir
+export function predict(landmarks) {
+  return apiRequest("/predict", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ landmarks }),
   });
-  return res.json();
 }
 
-export async function resetAll() {
-  const res = await fetch(`${API_URL}/reset`, { method: "POST" });
-  return res.json();
+// Resetear todo
+export function resetAll() {
+  return apiRequest("/reset", { method: "POST" });
 }

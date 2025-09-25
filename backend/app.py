@@ -1,258 +1,134 @@
-import os
-import json
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify
 from flask_cors import CORS
-import pandas as pd
-import numpy as np
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
-import joblib
-from datetime import datetime
+import os, csv
+from ml.trainer import train_model, load_model
+from ml.predictor import predict_landmark
 
-# --- Config ---
-DATA_DIR = "storage"
-DATA_FILE = os.path.join(DATA_DIR, "data.csv")
-MODEL_FILE = os.path.join(DATA_DIR, "model.joblib")
-ALLOWED_KEYS = None  # opcional: lista de keys esperadas en landmarks
+app = Flask(__name__)
+# Permitir múltiples URLs de frontends
+CORS(app, resources={r"/*": {"origins": [
+    "http://localhost:5173",       # frontend local
+    "https://senias-main-front.onrender.com",  # frontend de main en Render 
+    "https://senias-edu-front.onrender.com"  # frontend de edu en render
+]}})
+
+DATA_DIR = "data"
+DATA_FILE = os.path.join(DATA_DIR, "landmarks.csv")
+MODEL_PATH = "model.pkl"
 
 os.makedirs(DATA_DIR, exist_ok=True)
 
-app = Flask(__name__)
-CORS(app)
+# 🔹 Crear archivo CSV si no existe
+if not os.path.exists(DATA_FILE):
+    with open(DATA_FILE, mode="w", newline="") as f:
+        writer = csv.writer(f)
+        # 21 puntos x 3 coordenadas = 63 features
+        header = [f"f{i}" for i in range(63)] + ["label"]
+        writer.writerow(header)
 
-# Utilidades
-def load_dataset():
-    if not os.path.exists(DATA_FILE):
-        return pd.DataFrame()  # vacío
-    return pd.read_csv(DATA_FILE)
+# Cargar modelo si existe
+model = load_model()
 
-def save_dataset(df):
-    df.to_csv(DATA_FILE, index=False)
-
-def get_counts():
-    df = load_dataset()
-    if df.empty:
-        return {}
-    return df['label'].value_counts().to_dict()
-
-def flatten_landmarks(landmarks):
-    """
-    landmarks: dict o lista con coordenadas/valores (ej: {x0:.., y0:.., z0:.., ...} o [[x,y,z],...])
-    Retorna una lista plana de números.
-    """
-    # Intentar manejar formatos comunes
-    if isinstance(landmarks, dict):
-        # Orden estable: clave ordenada por nombre
-        keys = sorted(landmarks.keys())
-        vals = []
-        for k in keys:
-            v = landmarks[k]
-            if isinstance(v, (list, tuple)):
-                vals.extend([float(x) for x in v])
-            else:
-                vals.append(float(v))
-        return vals
-    if isinstance(landmarks, list):
-        flat = []
-        for item in landmarks:
-            if isinstance(item, (list, tuple)):
-                flat.extend([float(x) for x in item])
-            elif isinstance(item, dict):
-                # aplanar dict interno por orden de claves
-                for kk in sorted(item.keys()):
-                    flat.append(float(item[kk]))
-            else:
-                flat.append(float(item))
-        return flat
-    # fallback
-    return [float(landmarks)]
-
-# --- Endpoints ---
-
-@app.route("/health", methods=["GET"])
-def health():
-    return jsonify({"status": "ok", "time": datetime.utcnow().isoformat() + "Z"})
-
+# Guardar muestra
 @app.route("/save_landmark", methods=["POST"])
 def save_landmark():
-    """
-    Request JSON expected:
-    {
-      "label": "A",
-      "landmarks": {...}  // cualquier estructura JSON con coords
-    }
-    Response:
-    {
-      "status": "ok",
-      "message": "...",
-      "total": 12
-    }
-    """
-    payload = request.get_json(force=True)
-    label = payload.get("label")
-    landmarks = payload.get("landmarks")
-    if not label or landmarks is None:
-        return jsonify({"status": "error", "message": "Falta 'label' o 'landmarks' en el cuerpo"}), 400
+    data = request.json
+    label = data.get("label")
+    landmarks = data.get("landmarks")
 
-    try:
-        flat = flatten_landmarks(landmarks)
-    except Exception as e:
-        return jsonify({"status": "error", "message": f"Error al procesar landmarks: {e}"}), 400
+    if not label or not landmarks:
+        return jsonify({"error": "Etiqueta o landmarks faltantes"}), 400
 
-    # cargar dataset actual
-    df = load_dataset()
-    # crear columna si dataset vacío => dinamically sized features
-    if df.empty:
-        # crear nombres de columnas f0,f1...
-        cols = [f"f{i}" for i in range(len(flat))]
-        cols.append("label")
-        df = pd.DataFrame(columns=cols)
+    # Contar muestras existentes de esta etiqueta
+    count = 0
+    with open(DATA_FILE, mode="r") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            if row["label"] == label:
+                count += 1
 
-    # comprobar que el largo coincide
-    expected_features = [c for c in df.columns if c != "label"]
-    if len(flat) != len(expected_features):
-        # si dataset vacío o mismatch, permitir adaptación si vacío; si no, devolver error
-        if len(expected_features) == 0:
-            # rellenar DF con tamaño de flat
-            cols = [f"f{i}" for i in range(len(flat))] + ["label"]
-            df = pd.DataFrame(columns=cols)
-            expected_features = [c for c in df.columns if c != "label"]
-        else:
-            return jsonify({
-                "status": "error",
-                "message": f"Dimensiones diferentes: se esperaban {len(expected_features)} features, llegaron {len(flat)}"
-            }), 400
+    if count >= 100:
+        return jsonify({"message": f"❌ Ya tienes 100 muestras para '{label}'"}), 400
 
-    # crear fila
-    row = {f"f{i}": flat[i] for i in range(len(flat))}
-    row["label"] = str(label)
-    df = pd.concat([df, pd.DataFrame([row])], ignore_index=True)
+    # 🔹 Aplanar landmarks antes de guardar
+    landmarks_flat = []
+    for lm in landmarks:
+        landmarks_flat.extend([lm["x"], lm["y"], lm["z"]])
 
-    save_dataset(df)
-    counts = get_counts()
-    total_for_label = counts.get(str(label), 0)
-    return jsonify({"status": "ok", "message": "Muestra guardada", "total": int(total_for_label)})
+    # Guardar nueva muestra
+    with open(DATA_FILE, mode="a", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(landmarks_flat + [label])
 
+    return jsonify({"message": f"✅ Muestra guardada para '{label}'", "total": count + 1})
+
+# Progreso
 @app.route("/progress", methods=["GET"])
 def progress():
-    counts = get_counts()
-    return jsonify(counts)
+    result = {}
+    with open(DATA_FILE, mode="r") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            lbl = row["label"]
+            result[lbl] = result.get(lbl, 0) + 1
+    return jsonify(result)
 
+# Entrenar
 @app.route("/train", methods=["POST"])
 def train():
-    """
-    Entrena un RF con los datos actuales y guarda el modelo.
-    Request: puede incluir parámetros opcionales (ej: test_size)
-    """
-    df = load_dataset()
-    if df.empty or "label" not in df.columns:
-        return jsonify({"status": "error", "message": "No hay datos suficientes para entrenar"}), 400
-
-    # preparar X,y
-    X = df[[c for c in df.columns if c != "label"]].astype(float).values
-    y = df["label"].astype(str).values
-
-    # params soportados opcionalmente
-    body = request.get_json(silent=True) or {}
-    test_size = float(body.get("test_size", 0.2))
-    random_state = int(body.get("random_state", 42))
-
+    global model
     try:
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_state, stratify=y)
-    except Exception:
-        # fallback sin stratify si clases pequeñas
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_state)
-
-    # Entrenamiento: RandomForest (rápido, robusto)
-    clf = RandomForestClassifier(n_estimators=150, random_state=random_state)
-    clf.fit(X_train, y_train)
-
-    # evaluar
-    y_pred = clf.predict(X_test)
-    acc = float(accuracy_score(y_test, y_pred))
-
-    # guardar modelo
-    joblib.dump(clf, MODEL_FILE)
-
-    return jsonify({
-        "status": "ok",
-        "message": "Entrenamiento completado",
-        "accuracy": acc,
-        "samples": int(len(df))
-    })
-
-@app.route("/predict", methods=["POST"])
-def predict_route():
-    """
-    Request:
-      { "landmarks": ... }
-    Response:
-      { "status":"ok", "prediction":"A", "confidence":0.87 }
-    """
-    payload = request.get_json(force=True)
-    landmarks = payload.get("landmarks")
-    if landmarks is None:
-        return jsonify({"status": "error", "message": "Faltan landmarks"}), 400
-    if not os.path.exists(MODEL_FILE):
-        return jsonify({"status": "error", "message": "No hay modelo entrenado"}), 400
-
-    try:
-        flat = flatten_landmarks(landmarks)
+        result = train_model(DATA_FILE, MODEL_PATH)
+        model = load_model(MODEL_PATH)
+        return jsonify({"message": "✅ Modelo entrenado", **result})
     except Exception as e:
-        return jsonify({"status": "error", "message": f"Error al procesar landmarks: {e}"}), 400
+        return jsonify({"error": str(e)}), 500
 
-    clf = joblib.load(MODEL_FILE)
-    # verificar shape: si features mismatches, devolver error
-    n_features_model = clf.n_features_in_
-    if len(flat) != n_features_model:
-        return jsonify({
-            "status": "error",
-            "message": f"Dimensiones incorrectas para el modelo (se esperan {n_features_model} features, llegaron {len(flat)})"
-        }), 400
+# Predecir
+@app.route("/predict", methods=["POST"])
+def predict():
+    global model
+    data = request.json
+    landmarks = data.get("landmarks")
 
-    X = np.array(flat).reshape(1, -1)
-    preds = clf.predict_proba(X) if hasattr(clf, "predict_proba") else None
-    pred = clf.predict(X)[0]
-    confidence = None
-    if preds is not None:
-        # tomar probabilidad de la clase predicha
-        classes = clf.classes_
-        idx = list(classes).index(pred)
-        confidence = float(preds[0][idx])
-    else:
-        confidence = 1.0
+    if not landmarks:
+        return jsonify({"error": "Faltan landmarks"}), 400
 
-    return jsonify({
-        "status": "ok",
-        "prediction": str(pred),
-        "confidence": float(confidence)
-    })
+    if model is None:
+        return jsonify({"error": "Modelo no entrenado aún"}), 400
 
+    # 🔹 Aplanar landmarks para la predicción
+    landmarks_flat = []
+    for lm in landmarks:
+        landmarks_flat.extend([lm["x"], lm["y"], lm["z"]])
+
+    try:
+        result = predict_landmark(model, landmarks_flat)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# Resetear todo
 @app.route("/reset", methods=["POST"])
 def reset():
-    # eliminar archivos
+    global model
     try:
+        # borrar dataset
         if os.path.exists(DATA_FILE):
             os.remove(DATA_FILE)
-        if os.path.exists(MODEL_FILE):
-            os.remove(MODEL_FILE)
-        return jsonify({"status": "ok", "message": "Datos y modelo reseteados"})
+        with open(DATA_FILE, mode="w", newline="") as f:
+            writer = csv.writer(f)
+            header = [f"f{i}" for i in range(63)] + ["label"]
+            writer.writerow(header)
+
+        # borrar modelo
+        if os.path.exists(MODEL_PATH):
+            os.remove(MODEL_PATH)
+
+        model = None
+        return jsonify({"message": "🔄 Datos y modelo reseteados"})
     except Exception as e:
-        return jsonify({"status": "error", "message": f"Error al resetear: {e}"}), 500
-
-# Endpoint opcional para descargar dataset / modelo (útil en desarrollo)
-@app.route("/download/data", methods=["GET"])
-def download_data():
-    if not os.path.exists(DATA_FILE):
-        return jsonify({"status":"error","message":"No hay dataset"}), 404
-    return send_file(DATA_FILE, as_attachment=True)
-
-@app.route("/download/model", methods=["GET"])
-def download_model():
-    if not os.path.exists(MODEL_FILE):
-        return jsonify({"status":"error","message":"No hay modelo"}), 404
-    return send_file(MODEL_FILE, as_attachment=True)
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))

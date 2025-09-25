@@ -55,42 +55,49 @@ const HandCapture = ({ onResults }) => {
     };
   }, [cameraStarted, onResults]);
 
-  const connections = [
-    [0,1],[1,2],[2,3],[3,4],
-    [0,5],[5,6],[6,7],[7,8],
-    [0,9],[9,10],[10,11],[11,12],
-    [0,13],[13,14],[14,15],[15,16],
-    [0,17],[17,18],[18,19],[19,20]
-  ];
+ const connections = [
+  // Pulgar
+  [0,1],[1,2],[2,3],[3,4],
+  // Índice
+  [0,5],[5,6],[6,7],[7,8],
+  // Medio
+  [0,9],[9,10],[10,11],[11,12],
+  // Anular
+  [0,13],[13,14],[14,15],[15,16],
+  // Meñique
+  [0,17],[17,18],[18,19],[19,20],
+  // Conexiones de nudillos entre dedos
+  [5,9],[9,13],[13,17]
+];
 
-  const drawHand = (ctx, landmarks) => {
-    ctx.strokeStyle = "#26c4c4ff"; // líneas celestes
-    ctx.fillStyle = "#26c2c2ff";   // puntos celestes
-    ctx.lineWidth = 2;
+const drawHand = (ctx, landmarks) => {
+  ctx.strokeStyle = "#26c4c4ff"; // líneas celestes
+  ctx.fillStyle = "#26c2c2ff";   // puntos celestes
+  ctx.lineWidth = 2;
 
-    // dibujar conexiones
-    connections.forEach(([startIdx, endIdx]) => {
-      const start = landmarks[startIdx];
-      const end = landmarks[endIdx];
-      ctx.beginPath();
-      ctx.moveTo(start.x * ctx.canvas.width, start.y * ctx.canvas.height);
-      ctx.lineTo(end.x * ctx.canvas.width, end.y * ctx.canvas.height);
-      ctx.stroke();
-    });
+  // dibujar conexiones
+  connections.forEach(([startIdx, endIdx]) => {
+    const start = landmarks[startIdx];
+    const end = landmarks[endIdx];
+    ctx.beginPath();
+    ctx.moveTo(start.x * ctx.canvas.width, start.y * ctx.canvas.height);
+    ctx.lineTo(end.x * ctx.canvas.width, end.y * ctx.canvas.height);
+    ctx.stroke();
+  });
 
-    // dibujar puntos
-    landmarks.forEach((landmark) => {
-      ctx.beginPath();
-      ctx.arc(
-        landmark.x * ctx.canvas.width,
-        landmark.y * ctx.canvas.height,
-        5,
-        0,
-        2 * Math.PI
-      );
-      ctx.fill();
-    });
-  };
+  // dibujar puntos
+  landmarks.forEach((landmark) => {
+    ctx.beginPath();
+    ctx.arc(
+      landmark.x * ctx.canvas.width,
+      landmark.y * ctx.canvas.height,
+      5,
+      0,
+      2 * Math.PI
+    );
+    ctx.fill();
+  });
+};
 
   return (
     <div className="hand-capture-wrapper">

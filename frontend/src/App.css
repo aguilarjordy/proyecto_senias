@@ -147,7 +147,7 @@ canvas {
 }
 
 .card {
-  background: #f9fafb;
+  background: #b0b0b0;
   padding: 1.2rem;
   border-radius: 14px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
@@ -212,4 +212,218 @@ canvas {
     font-size: 0.9rem;
     padding: 0.5rem 0.8rem;
   }
+}
+
+/* === Selects (combo box) === */
+.actions select {
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  border: 2px solid #d1d5db;
+  outline: none;
+  transition: 0.2s ease;
+  font-size: 1rem;
+  background: gold;   /* 🎨 dorado */
+  color: #111827;
+  cursor: pointer;
+  min-width: 160px; /* mismo ancho aproximado que el input */
+}
+
+.actions select:focus {
+  border-color: #2563eb; /* mismo azul que el input al enfocarse */
+}
+
+.actions select:hover {
+  background: #fef08a; /* 🎨 amarillo suave al pasar el mouse */
+}
+
+
+
+
+
+
+
+
+
+/* # Barra superior de navegación ******************** MODIFICACIONES PARA LA PAGINA DE INICIO**************/
+.header {
+  display: flex;
+  gap: 1rem;
+  background: #1a1a1a;   /* Fondo oscuro */
+  padding: 1rem;
+  justify-content: center;
+}
+
+/* # Botones de la barra (Inicio / Reconocimiento) */
+.header button {
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  border: none;
+  background: #646cff;
+  color: white;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background 0.2s ease;
+}
+
+/* # Hover de botones (cambia color al pasar el mouse) */
+.header button:hover {
+  background: #535bf2;
+}
+
+/* # Contenido centrado en página inicio */
+.content {
+  padding: 2rem;
+  text-align: center;
+}
+
+
+/* # Barra superior de navegación */
+.header {
+  display: flex;
+  gap: 1rem;
+  background: #1a1a1a;   /* Fondo oscuro */
+  padding: 1rem;
+  justify-content: center;
+}
+
+/* # Botones de la barra (Inicio / Reconocimiento) */
+.header button {
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  border: none;
+  background: #646cff;
+  color: white;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background 0.2s ease;
+}
+
+/* # Hover de botones (cambia color al pasar el mouse) */
+.header button:hover {
+  background: #535bf2;
+}
+
+/* # Contenido centrado en página inicio */
+.content {
+  padding: 2rem;
+  text-align: center;
+}
+
+
+
+
+
+.page-content {
+  min-height: 500px; /* Asegura que las páginas "Inicio" y "Reconocimiento" tengan el mismo tamaño */
+}
+
+
+
+
+
+
+
+/* #NAVBAR   BARRA SUPERIOR CAMBIAR DE COLOR*/
+
+/* // estilo para la barra de navegación */
+.navbar {
+  display: flex;
+  justify-content: space-between; /* logo izquierda, botones derecha */
+  align-items: center;
+  margin-bottom: 1.5rem;
+  background-color: #1f2937;
+  border-radius: 12px;
+  border: 3px solid #374151
+}
+
+/* // tamaño del logo */
+.navbar .logo {
+  height: 50px; /* ajusta según quieras */
+}
+
+.navbar .nav-buttons button {
+  margin-left: 0.5rem;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: none;
+  background-color: #646cff;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+
+/* // contenedor de botones */
+.navbar .nav-buttons button {
+  background-color: #535bf2;
+  margin-left: 0.5rem;
+}
+
+
+
+
+
+
+
+
+/* ================== Banner ================== */
+.banner {
+  background-color: #1f2937;  /* Fondo azul morado del banner */
+  color: white;               /* Color del texto dentro del banner */
+  padding: 30px 20px;         /* Espacio interno: 30px arriba/abajo, 20px izquierda/derecha */
+  border-radius: 12px;        /* Bordes redondeados */
+  margin-bottom: 20px;        /* Espacio debajo del banner para separar del contenido */
+  text-align: center;         /* Centra horizontalmente todo el contenido dentro del banner */
+}
+
+/* ================== Título dentro del banner ================== */
+.banner h1 {
+  font-size: 2rem;            /* Tamaño grande para el título */
+  margin-bottom: 10px;        /* Espacio entre el título y el párrafo debajo */
+}
+
+/* ================== Párrafo dentro del banner ================== */
+.banner p {
+  font-size: 1.1rem;          /* Tamaño del texto descriptivo, fácil de leer */
+}
+
+
+
+
+
+
+
+
+/* ================== Footer ================== */
+.footer {
+  background-color: #1f2937;   /* Fondo oscuro */
+  color: white;                /* Texto blanco */
+  text-align: center;          /* Centrar texto */
+  padding: 20px 10px;          /* Espacio interno */
+  border-radius: 12px;         /* Bordes redondeados */
+  margin-top: 30px;            /* Separación del contenido */
+  font-size: 0.9rem;           /* Tamaño de texto */
+}
+
+.footer-social {
+  margin: 10px 0;
+}
+
+.footer-social span {
+  margin-right: 8px;
+}
+
+.footer-social a {
+  margin: 0 5px;
+  display: inline-block;
+}
+
+.social-icon {
+  width: 24px;
+  height: 24px;
+  vertical-align: middle;
+}
+
+.footer-contact p {
+  margin: 5px 0;
 }

@@ -195,16 +195,6 @@ function App() {
       </section>
     </div>
   );
-  
 }
-const data = await saveLandmark(label, lastLandmarks);
-if (data.status === "ok") addNotification("success", data.message || "Guardado");
-else addNotification("error", data.message || "Error");
-
-// similar para trainModel:
-const trainRes = await trainModel();
-if (trainRes.status === "ok") addNotification("success", `Entrenado: ${(trainRes.accuracy*100).toFixed(1)}%`);
-else addNotification("error", trainRes.message);
-
 
 export default App;

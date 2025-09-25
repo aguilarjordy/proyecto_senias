@@ -9,6 +9,7 @@ app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": [
     "http://localhost:5173",       # frontend local
     "https://senias-main-front.onrender.com"  # frontend de main en Render 
+    "https://senias-edu-front.onrender.com"  # frontend de edu en render
 ]}})
 
 DATA_DIR = "data"

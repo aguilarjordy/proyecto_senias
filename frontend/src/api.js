@@ -1,4 +1,4 @@
-const API_URL = "https://senias-main-back.onrender.com";
+const API_URL = import.meta.env.VITE_API_URL;
 
 export async function saveLandmark(label, landmarks) {
   const res = await fetch(`${API_URL}/save_landmark`, {

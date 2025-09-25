@@ -8,7 +8,10 @@ app = Flask(__name__)
 # Permitir múltiples URLs de frontends
 CORS(app, resources={r"/*": {"origins": [
     "http://localhost:5173",       # frontend local
-    "https://senias-main-front.onrender.com"  # frontend de main en Render 
+    "https://senias-main-front.onrender.com",   # frontend de main en Render
+    "https://senias-jordy-front.onrender.com",  # frontend de jordy
+    "https://senias-edu-front.onrender.com",    # frontend de edu
+    "https://senias-rodrigo-front.onrender.com" # frontend de rodrigo 
 ]}})
 
 DATA_DIR = "data"
@@ -27,6 +30,11 @@ if not os.path.exists(DATA_FILE):
 
 # Cargar modelo si existe
 model = load_model()
+
+#Mensaje para saber que el backend esta iniciado
+@app.route('/')
+def home():
+    return jsonify({"estado": "Backend iniciado correctamente"})
 
 # Guardar muestra
 @app.route("/save_landmark", methods=["POST"])

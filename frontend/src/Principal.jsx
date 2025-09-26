@@ -1,4 +1,6 @@
+// Principal.jsx - Componente principal de la aplicación
 import React, { useState } from 'react';
+import './principal.css';
 import SenialIAHeader from './components/SenialIAHeader';
 import SenialIAHero from './components/SenialIAHero';
 import SenialIAFeatures from './components/SenialIAFeatures';

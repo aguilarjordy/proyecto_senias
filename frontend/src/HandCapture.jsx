@@ -6,76 +6,62 @@ const HandCapture = ({ onResults }) => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [cameraStarted, setCameraStarted] = useState(false);
-  const handsRef = useRef(null);
 
   useEffect(() => {
-    const initializeHands = async () => {
-      try {
-        const hands = new Hands({
-          locateFile: (file) =>
-            `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
-        });
-
-        hands.setOptions({
-          maxNumHands: 2,
-          modelComplexity: 1,
-          minDetectionConfidence: 0.7,
-          minTrackingConfidence: 0.7,
-        });
-
-        const handleResults = (results) => {
-          if (onResults) {
-            onResults(results.multiHandLandmarks?.[0] || null);
-          }
-
-          const canvas = canvasRef.current;
-          if (!canvas) return;
-          
-          const ctx = canvas.getContext("2d");
-          ctx.save();
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          
-          if (results.image) {
-            ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
-          }
-
-          if (results.multiHandLandmarks) {
-            for (const landmarks of results.multiHandLandmarks) {
-              drawHand(ctx, landmarks);
-            }
-          }
-          ctx.restore();
-        };
-
-        hands.onResults(handleResults);
-        handsRef.current = hands;
-
-        // Iniciar cámara después de configurar hands
-        if (videoRef.current && !cameraStarted) {
-          const camera = new Camera(videoRef.current, {
-            onFrame: async () => {
-              if (handsRef.current && videoRef.current) {
-                await handsRef.current.send({ image: videoRef.current });
-              }
-            },
-            width: 640,
-            height: 480,
-          });
-          
-          await camera.start();
-          setCameraStarted(true);
-        }
-      } catch (error) {
-        console.error("Error initializing hands:", error);
+    const handleResults = (results) => {
+      // 🔹 CAMBIO: Enviar TODAS las manos detectadas (hasta 2)
+      if (onResults) {
+        onResults(results.multiHandLandmarks || []); // 🔹 Array con 0, 1 o 2 manos
       }
+
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext("2d");
+      ctx.save();
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      if (results.image) {
+        ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+      }
+
+      // 🔹 CAMBIO: Dibujar todas las manos detectadas
+      if (results.multiHandLandmarks) {
+        results.multiHandLandmarks.forEach((landmarks, handIndex) => {
+          // 🔹 COLOR DIFERENTE PARA CADA MANO
+          const colors = ["#26c4c4ff", "#ff6b6bff"]; // Celeste y rojo
+          drawHand(ctx, landmarks, colors[handIndex % colors.length]);
+        });
+      }
+
+      ctx.restore();
     };
 
-    initializeHands();
+    const hands = new Hands({
+      locateFile: (file) =>
+        `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
+    });
+
+    // 🔹 CAMBIO: Aumentar máximo de manos a 2
+    hands.setOptions({
+      maxNumHands: 2, // 🔹 IMPORTANTE: Cambiado a 2 manos
+      modelComplexity: 1,
+      minDetectionConfidence: 0.7,
+      minTrackingConfidence: 0.7,
+    });
+
+    hands.onResults(handleResults);
+
+    if (videoRef.current && !cameraStarted) {
+      const camera = new Camera(videoRef.current, {
+        onFrame: async () => await hands.send({ image: videoRef.current }),
+        width: 640,
+        height: 480,
+      });
+      camera.start();
+      setCameraStarted(true);
+    }
 
     return () => {
-      if (handsRef.current) {
-        handsRef.current.close();
-      }
+      hands.close();
     };
   }, [cameraStarted, onResults]);
 
@@ -87,14 +73,13 @@ const HandCapture = ({ onResults }) => {
     [0,17],[17,18],[18,19],[19,20]
   ];
 
-  const drawHand = (ctx, landmarks) => {
-    if (!ctx) return;
-    
-    ctx.strokeStyle = "#26c4c4ff";
-    ctx.fillStyle = "#26c2c2ff";
+  // 🔹 CAMBIO: Aceptar color como parámetro
+  const drawHand = (ctx, landmarks, color = "#26c4c4ff") => {
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
     ctx.lineWidth = 2;
 
-    // Dibujar conexiones
+    // dibujar conexiones
     connections.forEach(([startIdx, endIdx]) => {
       const start = landmarks[startIdx];
       const end = landmarks[endIdx];
@@ -106,7 +91,7 @@ const HandCapture = ({ onResults }) => {
       }
     });
 
-    // Dibujar puntos
+    // dibujar puntos
     landmarks.forEach((landmark) => {
       if (landmark) {
         ctx.beginPath();
@@ -128,8 +113,8 @@ const HandCapture = ({ onResults }) => {
         ref={videoRef}
         autoPlay
         playsInline
-        muted // 🔹 IMPORTANTE: agregar muted para autoplay en algunos navegadores
-        style={{ width: "100%", borderRadius: "12px", display: "block" }}
+        muted
+        style={{ width: "100%", borderRadius: "12px" }}
       />
       <canvas
         ref={canvasRef}
@@ -144,6 +129,20 @@ const HandCapture = ({ onResults }) => {
           height: "auto"
         }}
       />
+      
+      {/* 🔹 NUEVO: Indicador de manos detectadas */}
+      <div style={{
+        position: "absolute",
+        top: "10px",
+        right: "10px",
+        background: "rgba(0,0,0,0.7)",
+        color: "white",
+        padding: "5px 10px",
+        borderRadius: "5px",
+        fontSize: "12px"
+      }}>
+        Manos: <span id="hand-counter">0</span>/2
+      </div>
     </div>
   );
 };

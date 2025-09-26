@@ -1,21 +1,171 @@
-/* Reset básico */
-* {
+/* ======= App General ======= */
+body {
+  font-family: "Inter", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   margin: 0;
   padding: 0;
-  box-sizing: border-box;
+  background-color: #f9fafb; /* fallback si no carga Tailwind */
 }
 
-html, body {
-  font-family: Arial, Helvetica, sans-serif;
+/* ======= Navbar ======= */
+.navbar {
+  background: white;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  padding: 12px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.navbar a {
+  color: #374151;
+  text-decoration: none;
+  margin: 0 12px;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.navbar a:hover {
+  color: #2563eb;
+}
+
+/* ======= Hero ======= */
+.hero {
+  text-align: center;
+  padding: 80px 20px;
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
+  color: white;
+}
+
+.hero h1 {
+  font-size: 2.5rem;
+  margin-bottom: 12px;
+  font-weight: bold;
+}
+
+.hero p {
+  font-size: 1.2rem;
+  color: #e0f2fe;
+}
+
+.hero button {
+  margin-top: 20px;
+  padding: 12px 20px;
+  background: white;
+  color: #2563eb;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, background 0.3s;
+}
+
+.hero button:hover {
   background: #f3f4f6;
-  color: #111827;
-  height: 100%;
-  width: 100%;
+  transform: translateY(-2px);
 }
 
-#root {
+/* ======= Features ======= */
+.features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 24px;
+  padding: 60px 20px;
+  max-width: 1100px;
+  margin: auto;
+}
+
+.feature-card {
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+}
+
+.feature-card h3 {
+  color: #2563eb;
+  margin-bottom: 10px;
+  font-size: 1.25rem;
+}
+
+/* ======= Footer ======= */
+.footer {
+  background: #1f2937;
+  color: #d1d5db;
+  text-align: center;
+  padding: 20px;
+  font-size: 0.9rem;
+}
+
+/* ======= Modal ======= */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; 
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.6);
   display: flex;
   justify-content: center;
-  align-items: flex-start;
-  padding: 20px;
+  align-items: center;
+  z-index: 50;
+}
+
+.modal {
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+  text-align: center;
+  animation: fadeIn 0.3s ease;
+}
+
+.modal h2 {
+  margin-bottom: 12px;
+  font-size: 1.25rem;
+  font-weight: bold;
+}
+
+.modal p {
+  margin-bottom: 20px;
+  font-size: 1rem;
+  color: #374151;
+}
+
+.modal button {
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: none;
+  margin: 0 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.3s;
+}
+
+.modal button.confirm {
+  background: #2563eb;
+  color: white;
+}
+
+.modal button.confirm:hover {
+  background: #1d4ed8;
+}
+
+.modal button.cancel {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.modal button.cancel:hover {
+  background: #d1d5db;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
 }

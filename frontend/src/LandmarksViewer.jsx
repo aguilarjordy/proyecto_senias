@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { getLandmarksData, getLandmarksSummary, getBackendStatus } from "./api";
-import "./LandmarksViewer.css"; // Crearemos este CSS
+import "./LandmarksViewers.css"; // Crearemos este CSS
 
 const LandmarksViewer = () => {
   const [landmarks, setLandmarks] = useState([]);

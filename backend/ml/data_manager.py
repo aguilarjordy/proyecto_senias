@@ -1,4 +1,3 @@
-# ml/data_manager.py
 import os
 import csv
 import pandas as pd
@@ -8,18 +7,34 @@ class DataManager:
         self.data_file = data_file
         self.data_dir = os.path.dirname(data_file)
         os.makedirs(self.data_dir, exist_ok=True)
-        self._ensure_csv_exists()
+        self._ensure_csv_valid()
 
-    def _ensure_csv_exists(self):
-        """Crear archivo CSV si no existe"""
+    def _ensure_csv_valid(self):
+        """Verificar que el CSV tenga 126 columnas, si no regenerar"""
+        header = [f"f{i}" for i in range(126)] + ["label"]
+
         if not os.path.exists(self.data_file):
+            # Crear nuevo si no existe
             with open(self.data_file, mode="w", newline="") as f:
                 writer = csv.writer(f)
-                header = [f"f{i}" for i in range(63)] + ["label"]
+                writer.writerow(header)
+            return
+
+        # Verificar columnas
+        try:
+            df = pd.read_csv(self.data_file, nrows=0)  # solo cabecera
+            if df.shape[1] != len(header):
+                # Reemplazar con estructura correcta
+                with open(self.data_file, mode="w", newline="") as f:
+                    writer = csv.writer(f)
+                    writer.writerow(header)
+        except Exception:
+            # Si está corrupto, regenerar
+            with open(self.data_file, mode="w", newline="") as f:
+                writer = csv.writer(f)
                 writer.writerow(header)
 
     def get_landmarks_data(self):
-        """Obtener todos los landmarks en formato JSON"""
         try:
             landmarks_data = []
             with open(self.data_file, mode="r") as f:
@@ -46,7 +61,6 @@ class DataManager:
             return {"error": f"Error reading landmarks: {str(e)}"}
 
     def get_landmarks_summary(self):
-        """Obtener resumen estadístico"""
         try:
             label_counts = {}
             total_samples = 0
@@ -70,7 +84,6 @@ class DataManager:
             return {"error": f"Error reading summary: {str(e)}"}
 
     def get_landmarks_by_label(self, label_name):
-        """Obtener muestras de una etiqueta específica"""
         try:
             landmarks_data = []
             with open(self.data_file, mode="r") as f:
@@ -89,7 +102,6 @@ class DataManager:
             return {"error": f"Error reading landmarks for label {label_name}: {str(e)}"}
 
     def get_progress(self):
-        """Obtener progreso por etiqueta"""
         try:
             result = {}
             with open(self.data_file, mode="r") as f:
@@ -102,8 +114,13 @@ class DataManager:
             return {"error": str(e)}
 
     def save_landmark(self, label, landmarks_flat):
-        """Guardar nuevo landmark"""
+        """
+        Guardar landmark (126 valores fijos).
+        """
         try:
+            if len(landmarks_flat) != 126:
+                return {"error": f"Se esperaban 126 valores, recibidos {len(landmarks_flat)}"}
+
             count = 0
             with open(self.data_file, mode="r") as f:
                 reader = csv.DictReader(f)
@@ -123,11 +140,10 @@ class DataManager:
             return {"error": f"Error saving landmark: {str(e)}"}
 
     def reset_data(self):
-        """Resetear todos los datos"""
         try:
             if os.path.exists(self.data_file):
                 os.remove(self.data_file)
-            self._ensure_csv_exists()
+            self._ensure_csv_valid()
             return {"message": "✅ Datos reseteados"}
         except Exception as e:
             return {"error": f"Error resetting data: {str(e)}"}

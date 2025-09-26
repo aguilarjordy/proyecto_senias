@@ -6,52 +6,76 @@ const HandCapture = ({ onResults }) => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [cameraStarted, setCameraStarted] = useState(false);
+  const handsRef = useRef(null);
 
   useEffect(() => {
-    const handleResults = (results) => {
-      if (onResults) onResults(results.multiHandLandmarks?.[0] || null);
+    const initializeHands = async () => {
+      try {
+        const hands = new Hands({
+          locateFile: (file) =>
+            `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
+        });
 
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext("2d");
-      ctx.save();
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+        hands.setOptions({
+          maxNumHands: 2,
+          modelComplexity: 1,
+          minDetectionConfidence: 0.7,
+          minTrackingConfidence: 0.7,
+        });
 
-      if (results.multiHandLandmarks) {
-        for (const landmarks of results.multiHandLandmarks) {
-          drawHand(ctx, landmarks);
+        const handleResults = (results) => {
+          if (onResults) {
+            onResults(results.multiHandLandmarks?.[0] || null);
+          }
+
+          const canvas = canvasRef.current;
+          if (!canvas) return;
+          
+          const ctx = canvas.getContext("2d");
+          ctx.save();
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          
+          if (results.image) {
+            ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+          }
+
+          if (results.multiHandLandmarks) {
+            for (const landmarks of results.multiHandLandmarks) {
+              drawHand(ctx, landmarks);
+            }
+          }
+          ctx.restore();
+        };
+
+        hands.onResults(handleResults);
+        handsRef.current = hands;
+
+        // Iniciar cámara después de configurar hands
+        if (videoRef.current && !cameraStarted) {
+          const camera = new Camera(videoRef.current, {
+            onFrame: async () => {
+              if (handsRef.current && videoRef.current) {
+                await handsRef.current.send({ image: videoRef.current });
+              }
+            },
+            width: 640,
+            height: 480,
+          });
+          
+          await camera.start();
+          setCameraStarted(true);
         }
+      } catch (error) {
+        console.error("Error initializing hands:", error);
       }
-
-      ctx.restore();
     };
 
-    const hands = new Hands({
-      locateFile: (file) =>
-        `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
-    });
-
-    hands.setOptions({
-      maxNumHands: 2,
-      modelComplexity: 1,
-      minDetectionConfidence: 0.7,
-      minTrackingConfidence: 0.7,
-    });
-
-    hands.onResults(handleResults);
-
-    if (videoRef.current && !cameraStarted) {
-      const camera = new Camera(videoRef.current, {
-        onFrame: async () => await hands.send({ image: videoRef.current }),
-        width: 640,
-        height: 480,
-      });
-      camera.start();
-      setCameraStarted(true);
-    }
+    initializeHands();
 
     return () => {
-      hands.close();
+      if (handsRef.current) {
+        handsRef.current.close();
+      }
     };
   }, [cameraStarted, onResults]);
 
@@ -64,31 +88,37 @@ const HandCapture = ({ onResults }) => {
   ];
 
   const drawHand = (ctx, landmarks) => {
-    ctx.strokeStyle = "#26c4c4ff"; // líneas celestes
-    ctx.fillStyle = "#26c2c2ff";   // puntos celestes
+    if (!ctx) return;
+    
+    ctx.strokeStyle = "#26c4c4ff";
+    ctx.fillStyle = "#26c2c2ff";
     ctx.lineWidth = 2;
 
-    // dibujar conexiones
+    // Dibujar conexiones
     connections.forEach(([startIdx, endIdx]) => {
       const start = landmarks[startIdx];
       const end = landmarks[endIdx];
-      ctx.beginPath();
-      ctx.moveTo(start.x * ctx.canvas.width, start.y * ctx.canvas.height);
-      ctx.lineTo(end.x * ctx.canvas.width, end.y * ctx.canvas.height);
-      ctx.stroke();
+      if (start && end) {
+        ctx.beginPath();
+        ctx.moveTo(start.x * ctx.canvas.width, start.y * ctx.canvas.height);
+        ctx.lineTo(end.x * ctx.canvas.width, end.y * ctx.canvas.height);
+        ctx.stroke();
+      }
     });
 
-    // dibujar puntos
+    // Dibujar puntos
     landmarks.forEach((landmark) => {
-      ctx.beginPath();
-      ctx.arc(
-        landmark.x * ctx.canvas.width,
-        landmark.y * ctx.canvas.height,
-        5,
-        0,
-        2 * Math.PI
-      );
-      ctx.fill();
+      if (landmark) {
+        ctx.beginPath();
+        ctx.arc(
+          landmark.x * ctx.canvas.width,
+          landmark.y * ctx.canvas.height,
+          5,
+          0,
+          2 * Math.PI
+        );
+        ctx.fill();
+      }
     });
   };
 
@@ -98,12 +128,21 @@ const HandCapture = ({ onResults }) => {
         ref={videoRef}
         autoPlay
         playsInline
-        style={{ width: "100%", borderRadius: "12px" }}
+        muted // 🔹 IMPORTANTE: agregar muted para autoplay en algunos navegadores
+        style={{ width: "100%", borderRadius: "12px", display: "block" }}
       />
       <canvas
         ref={canvasRef}
         width={640}
         height={480}
+        style={{ 
+          position: "absolute", 
+          top: 0, 
+          left: 0, 
+          pointerEvents: "none",
+          width: "100%",
+          height: "auto"
+        }}
       />
     </div>
   );

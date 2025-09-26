@@ -1,7 +1,7 @@
 // AppRouter.jsx
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Landing from "./Landing.jsx";// 🌄 LandingPage
-import App from "./App"; // 🤖 Tu aplicación principal
+import App from "./App.jsx"; // 🤖 Tu aplicación principal
 
 function AppRouter() {
   return (

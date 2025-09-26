@@ -1,12 +1,20 @@
+// src/App.jsx
 import { useState, useEffect, useRef, useCallback } from "react";
 import HandCapture from "./HandCapture";
 import LandmarksViewer from "./LandmarksViewer";
-import { saveLandmark, getProgress, trainModel, predict, resetAll } from "./api";
+import {
+  saveLandmark,
+  getProgress,
+  trainModel,
+  predict,
+  resetAll,
+  getBackendStatus
+} from "./api";
 import "./App.css";
 
 function App() {
   const [label, setLabel] = useState("");
-  const [lastLandmarks, setLastLandmarks] = useState(null);
+  const [lastLandmarks, setLastLandmarks] = useState(null); // espera: array de 21 {x,y,z}
   const [progress, setProgress] = useState({});
   const [trainInfo, setTrainInfo] = useState(null);
   const [prediction, setPrediction] = useState(null);
@@ -14,56 +22,84 @@ function App() {
   const [showViewer, setShowViewer] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
   const [captureCount, setCaptureCount] = useState(0);
-  const [isResetting, setIsResetting] = useState(false); // 🔹 NUEVO: control de reset
-  const captureInterval = useRef(null);
-  const progressUpdateRef = useRef(0); // 🔹 NUEVO: contador para actualizaciones de progreso
+  const [isResetting, setIsResetting] = useState(false);
 
-  // ✅ Función para manejar landmarks detectados
-  const handleLandmarksDetected = useCallback((landmarks) => {
+  const captureInterval = useRef(null);
+  const progressUpdateRef = useRef(0);
+
+  // onResults ahora recibe una sola mano (o null)
+  const handleLandmarksDetected = useCallback((handLandmarks) => {
     if (!isResetting) {
-      setLastLandmarks(landmarks);
+      setLastLandmarks(handLandmarks || null);
     }
   }, [isResetting]);
 
-  // ✅ GUARDAR MUESTRA OPTIMIZADO
+  const fetchProgress = async () => {
+    const res = await getProgress();
+    if (res && !res.error) {
+      setProgress(res);
+    } else {
+      // res puede ser { error: "..."}
+      console.error("Error al obtener progreso:", res?.error);
+    }
+  };
+
+  useEffect(() => {
+    // al iniciar intenta obtener progreso y estado del backend
+    fetchProgress();
+    (async () => {
+      const st = await getBackendStatus();
+      if (st && st.error) {
+        console.warn("Backend status error:", st.error);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const saveSample = async () => {
     if (!label || !lastLandmarks || isResetting) return;
 
-    // 🔹 VERIFICACIÓN RÁPIDA de landmarks
-    if (!Array.isArray(lastLandmarks) || lastLandmarks.length !== 21) return;
-    
-    const isValid = lastLandmarks.every(lm => 
-      lm && typeof lm.x === 'number' && !isNaN(lm.x)
+    // validación: debe ser array de 21 puntos
+    if (!Array.isArray(lastLandmarks) || lastLandmarks.length !== 21) {
+      console.warn("Landmarks inválidos (se esperaban 21 puntos).", lastLandmarks);
+      return;
+    }
+
+    const isValid = lastLandmarks.every(lm =>
+      lm && typeof lm.x === "number" && !isNaN(lm.x) &&
+      typeof lm.y === "number" && !isNaN(lm.y) &&
+      typeof lm.z === "number" && !isNaN(lm.z)
     );
     if (!isValid) return;
 
     try {
-      // 🔹 OPTIMIZAR DATOS ENVIADOS (reducir decimales)
+      // reducir decimales para enviar menos payload
       const optimizedLandmarks = lastLandmarks.map(lm => ({
-        x: Math.round(lm.x * 1000) / 1000,  // 🔹 3 decimales instead de todos
+        x: Math.round(lm.x * 1000) / 1000,
         y: Math.round(lm.y * 1000) / 1000,
         z: Math.round(lm.z * 1000) / 1000
       }));
 
       const data = await saveLandmark(label, optimizedLandmarks);
-      
-      if (data.message) {
-        // 🔹 ACTUALIZACIÓN MÁS EFICIENTE
+
+      if (data && !data.error && data.message) {
         setCaptureCount(prev => prev + 1);
         setMessage(data.message);
 
-        // 🔹 ACTUALIZAR PROGRESO CADA 5 CAPTURAS (no cada vez)
         progressUpdateRef.current += 1;
         if (progressUpdateRef.current % 5 === 0) {
           fetchProgress();
         }
 
-        if (data.total >= 100) {
+        if (data.total && data.total >= 100) {
           stopAutoCapture();
           setMessage(`✅ Captura completada (100 muestras para ${label})`);
+          fetchProgress();
         }
-      } else if (data.error) {
-        setMessage(`❌ ${data.error}`);
+      } else {
+        // error desde backend o red
+        const errMsg = data?.error || "Respuesta inesperada del servidor";
+        setMessage(`❌ ${errMsg}`);
         stopAutoCapture();
       }
     } catch (error) {
@@ -73,13 +109,11 @@ function App() {
     }
   };
 
-  // ✅ INICIAR CAPTURA OPTIMIZADO
   const startAutoCapture = () => {
     if (!label) {
       setMessage("⚠️ Ingresa una etiqueta primero");
       return;
     }
-    
     if (isResetting) {
       setMessage("⚠️ Espera a que termine el reset");
       return;
@@ -88,13 +122,12 @@ function App() {
     setIsCapturing(true);
     setCaptureCount(0);
     progressUpdateRef.current = 0;
-    setMessage(`▶️ Captura rápida para '${label}'`);
-    
-    // 🔹 INTERVALO MÁS LARGO (1200ms = más estable)
+    setMessage(`▶️ Captura iniciada para '${label}'`);
+
+    // guardamos cada 1.2s para dar estabilidad
     captureInterval.current = setInterval(saveSample, 1200);
   };
 
-  // ✅ DETENER CAPTURA
   const stopAutoCapture = useCallback(() => {
     setIsCapturing(false);
     if (captureInterval.current) {
@@ -103,41 +136,32 @@ function App() {
     }
   }, []);
 
-  // ✅ OBTENER PROGRESO
-  const fetchProgress = async () => {
-    try {
-      const data = await getProgress();
-      setProgress(data);
-    } catch (error) {
-      console.error("Error al cargar progreso:", error);
-    }
-  };
-
-  // ✅ ENTRENAR MODELO
   const handleTrain = async () => {
     if (isResetting) {
       setMessage("⚠️ Espera a que termine el reset");
       return;
     }
-
     try {
       setMessage("⚡ Entrenando modelo...");
       const data = await trainModel();
-      setTrainInfo(data);
-      setMessage(data.message || "✅ Modelo entrenado");
-    } catch (error) {
-      console.error("Error en entrenamiento:", error);
+      if (data && !data.error) {
+        setTrainInfo(data);
+        setMessage(data.message || "✅ Entrenamiento finalizado");
+      } else {
+        setMessage(`❌ ${data?.error || "Error en entrenamiento"}`);
+      }
+      fetchProgress();
+    } catch (e) {
+      console.error("Error en train:", e);
       setMessage("❌ Error en entrenamiento");
     }
   };
 
-  // ✅ PREDECIR
   const handlePredict = async () => {
     if (!lastLandmarks) {
       setMessage("⚠️ No hay landmarks detectados");
       return;
     }
-
     if (isResetting) {
       setMessage("⚠️ Espera a que termine el reset");
       return;
@@ -145,61 +169,46 @@ function App() {
 
     try {
       const data = await predict(lastLandmarks);
-      setPrediction(data);
-      setMessage("🤖 Predicción realizada");
-    } catch (error) {
-      console.error("Error en predicción:", error);
+      if (data && !data.error) {
+        setPrediction(data);
+        setMessage("🤖 Predicción realizada");
+      } else {
+        setMessage(`❌ ${data?.error || "Error en predicción"}`);
+      }
+    } catch (e) {
+      console.error("Error en predicción:", e);
       setMessage("❌ Error en predicción");
     }
   };
 
-  // ✅ RESETEAR OPTIMIZADO
   const handleReset = async () => {
-    // 🔹 DETENER CAPTURA PRIMERO
     stopAutoCapture();
-    
     setIsResetting(true);
     setMessage("🔄 Reseteando datos...");
-
     try {
       const data = await resetAll();
-      
-      // 🔹 LIMPIAR ESTADOS
-      setProgress({});
-      setTrainInfo(null);
-      setPrediction(null);
-      setCaptureCount(0);
-      setLastLandmarks(null);
-      setLabel("");
-      
-      setMessage(data.message || "✅ Datos reseteados");
-      
-      // 🔹 REACTIVAR DESPUÉS DE RESET
+      if (data && !data.error) {
+        setProgress({});
+        setTrainInfo(null);
+        setPrediction(null);
+        setCaptureCount(0);
+        setLastLandmarks(null);
+        setLabel("");
+        setMessage(data.message || "✅ Datos reseteados");
+      } else {
+        setMessage(`❌ ${data?.error || "Error al resetear"}`);
+      }
+      // pequeña espera para que el backend re-cree CSV
       setTimeout(() => {
         setIsResetting(false);
         fetchProgress();
       }, 1000);
-      
-    } catch (error) {
-      console.error("Error al resetear:", error);
+    } catch (e) {
+      console.error("Error al resetear:", e);
       setMessage("❌ Error al resetear");
       setIsResetting(false);
     }
   };
-
-  // ✅ CARGAR PROGRESO AL INICIAR
-  useEffect(() => {
-    fetchProgress();
-  }, []);
-
-  // ✅ CLEANUP
-  useEffect(() => {
-    return () => {
-      if (captureInterval.current) {
-        clearInterval(captureInterval.current);
-      }
-    };
-  }, []);
 
   return (
     <div className="container">
@@ -209,10 +218,8 @@ function App() {
         {isResetting && <div style={{color: 'red', fontWeight: 'bold'}}>⚠️ SISTEMA EN RESET...</div>}
       </header>
 
-      {/* Cámara */}
       <HandCapture onResults={handleLandmarksDetected} />
 
-      {/* Botones y acciones */}
       <section className="actions">
         <input
           type="text"
@@ -223,69 +230,33 @@ function App() {
         />
 
         {!isCapturing ? (
-          <button 
-            onClick={startAutoCapture} 
-            disabled={!label || isResetting}
-          >
-            ▶️ Captura rápida
-          </button>
+          <button onClick={startAutoCapture} disabled={!label || isResetting}>▶️ Captura rápida</button>
         ) : (
-          <button className="stop" onClick={stopAutoCapture}>
-            ⏹️ Detener captura
-          </button>
+          <button className="stop" onClick={stopAutoCapture}>⏹️ Detener captura</button>
         )}
 
-        <button 
-          onClick={fetchProgress}
-          disabled={isResetting}
-        >
-          📊 Ver progreso
-        </button>
-        
-        <button 
-          onClick={handleTrain}
-          disabled={isResetting}
-        >
-          ⚡ Entrenar modelo
-        </button>
-        
-        <button 
-          onClick={handlePredict}
-          disabled={isResetting}
-        >
-          🤖 Predecir
-        </button>
-        
-        <button 
+        <button onClick={fetchProgress} disabled={isResetting}>📊 Ver progreso</button>
+        <button onClick={handleTrain} disabled={isResetting}>⚡ Entrenar modelo</button>
+        <button onClick={handlePredict} disabled={isResetting}>🤖 Predecir</button>
+
+        <button
           onClick={() => setShowViewer(!showViewer)}
           style={{background: showViewer ? '#10b981' : '#6b7280'}}
           disabled={isResetting}
         >
           {showViewer ? '👁️ Ocultar Datos' : '📊 Ver Datos Backend'}
         </button>
-        
-        <button 
-          className="reset" 
-          onClick={handleReset}
-          disabled={isResetting}
-        >
+
+        <button className="reset" onClick={handleReset} disabled={isResetting}>
           {isResetting ? '🔄 Reseteando...' : '🔄 Resetear todo'}
         </button>
       </section>
 
-      {/* Visualizador de landmarks */}
-      {showViewer && <LandmarksViewer />}
-
-      {/* Mensajes y estado */}
       {message && <p className="message">{message}</p>}
       {isCapturing && (
-        <p className="capturing">
-          ⏺️ Capturando... {captureCount}/100 
-          {lastLandmarks ? ' ✅ Detectados' : ' ❌ Esperando mano'}
-        </p>
+        <p className="capturing">⏺️ Capturando... {captureCount}/100 {lastLandmarks ? '✅ Detectados' : '❌ Esperando mano'}</p>
       )}
 
-      {/* Resultados */}
       <section className="results">
         <div className="card">
           <h3>📊 Progreso</h3>
@@ -324,6 +295,8 @@ function App() {
           )}
         </div>
       </section>
+
+      {showViewer && <LandmarksViewer />}
     </div>
   );
 }

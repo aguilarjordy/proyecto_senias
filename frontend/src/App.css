@@ -19,7 +19,7 @@ body {
 /* === Contenedor principal === */
 .container {
   width: 100%;
-  max-width: 1000px;
+  max-width: 1100px;
   background: #ffffff;
   border-radius: 20px;
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
@@ -34,7 +34,7 @@ header {
 }
 
 header h1 {
-  font-size: 2rem;
+  font-size: 2.2rem;
   color: #2563eb;
   margin-bottom: 0.5rem;
 }
@@ -44,7 +44,7 @@ header p {
   font-size: 1rem;
 }
 
-/* === Video y canvas responsive === */
+/* === Video y canvas === */
 .hand-capture-wrapper {
   position: relative;
   width: 100%;
@@ -63,7 +63,7 @@ canvas {
   position: absolute;
   top: 0;
   left: 0;
-  pointer-events: none; /* deja clics pasar a botones */
+  pointer-events: none;
 }
 
 /* === Acciones === */
@@ -73,8 +73,7 @@ canvas {
   flex-wrap: wrap;
   gap: 0.75rem;
   justify-content: center;
-  position: relative;
-  z-index: 2; /* botones siempre encima de canvas */
+  z-index: 2;
 }
 
 .actions input {
@@ -138,7 +137,7 @@ canvas {
   animation: blink 1s infinite;
 }
 
-/* === Resultados === */
+/* === Resultados / Cards === */
 .results {
   margin-top: 2rem;
   display: grid;
@@ -198,14 +197,14 @@ canvas {
   }
 }
 
-/* === Responsive adicional === */
+/* === Responsive === */
 @media (max-width: 700px) {
   .container {
     padding: 1rem;
   }
 
   header h1 {
-    font-size: 1.5rem;
+    font-size: 1.6rem;
   }
 
   .actions button, .actions input {

@@ -1,66 +1,75 @@
-/* LandmarksViewer.css OPTIMIZADO */
+/* LandmarksViewer.css - Adaptado y consistente con App.css */
 .landmarks-viewer {
-  background: white;
-  border-radius: 12px;
-  padding: 1rem; /* 🔹 Menos padding */
-  margin: 1rem 0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); /* 🔹 Sombra más ligera */
-  max-height: 500px; /* 🔹 Altura máxima */
-  overflow: hidden; /* 🔹 Evitar scroll innecesario */
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 1.2rem;
+  margin: 1.5rem 0;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  max-height: 600px;
+  overflow: hidden;
 }
 
 .viewer-header {
   text-align: center;
-  margin-bottom: 1rem; /* 🔹 Menos margen */
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #e5e7eb; /* 🔹 Línea más delgada */
+  margin-bottom: 1rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .viewer-header h2 {
   color: #2563eb;
-  margin-bottom: 0.25rem; /* 🔹 Menos espacio */
-  font-size: 1.3rem; /* 🔹 Título más pequeño */
+  margin-bottom: 0.3rem;
+  font-size: 1.4rem;
+  font-weight: 600;
 }
 
 .refresh-btn {
   background: #10b981;
   color: white;
   border: none;
-  padding: 0.4rem 0.8rem; /* 🔹 Botón más compacto */
-  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 0.9rem;
+  font-weight: 500;
+  transition: 0.2s ease;
+}
+
+.refresh-btn:hover {
+  background: #059669;
 }
 
 .status-card {
   background: #f0f9ff;
   border: 1px solid #bae6fd;
-  border-radius: 6px;
-  padding: 0.8rem; /* 🔹 Menos padding */
+  border-radius: 10px;
+  padding: 1rem;
   margin-bottom: 1rem;
-  font-size: 0.9rem; /* 🔹 Texto más pequeño */
+  font-size: 0.95rem;
 }
 
 .status-card h3 {
   color: #0369a1;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.5rem;
   font-size: 1rem;
 }
 
+/* Tabs navegación */
 .tabs {
   display: flex;
-  gap: 0.3rem; /* 🔹 Menos espacio entre botones */
+  gap: 0.5rem;
   margin-bottom: 1rem;
+  justify-content: center;
 }
 
 .tabs button {
   background: #f3f4f6;
   border: none;
-  padding: 0.4rem 0.8rem; /* 🔹 Botones más compactos */
-  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
   cursor: pointer;
-  font-size: 0.85rem;
-  transition: none; /* 🔹 Remover transición para más velocidad */
+  font-size: 0.9rem;
+  transition: background 0.2s ease;
 }
 
 .tabs button.active {
@@ -68,48 +77,50 @@
   color: white;
 }
 
+/* Estadísticas grid */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); /* 🔹 Tarjetas más pequeñas */
-  gap: 0.8rem;
-  margin: 0.8rem 0;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
 }
 
 .stat-card {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  padding: 0.8rem;
+  border-radius: 10px;
+  padding: 1rem;
   text-align: center;
 }
 
 .stat-number {
-  font-size: 1.5rem; /* 🔹 Números más pequeños */
+  font-size: 1.6rem;
   font-weight: bold;
   color: #2563eb;
   display: block;
 }
 
+/* Lista de labels */
 .labels-list {
-  margin-top: 0.8rem;
-  max-height: 250px; /* 🔹 Altura máxima con scroll */
+  margin-top: 1rem;
+  max-height: 280px;
   overflow-y: auto;
 }
 
 .label-item {
   display: flex;
   align-items: center;
-  gap: 0.8rem;
-  margin-bottom: 0.4rem;
-  padding: 0.4rem;
-  background: #f8fafc;
-  border-radius: 4px;
-  font-size: 0.9rem;
+  gap: 1rem;
+  margin-bottom: 0.6rem;
+  padding: 0.5rem;
+  background: #f9fafb;
+  border-radius: 6px;
+  font-size: 0.95rem;
 }
 
 .label-name {
-  font-weight: bold;
-  min-width: 60px; /* 🔹 Ancho reducido */
+  font-weight: 600;
+  min-width: 80px;
 }
 
 .label-count {
@@ -120,8 +131,9 @@
 .progress-bar {
   flex: 1;
   background: #e5e7eb;
-  border-radius: 2px;
-  height: 6px; /* 🔹 Barra más delgada */
+  border-radius: 4px;
+  height: 8px;
+  overflow: hidden;
 }
 
 .progress-fill {
@@ -141,7 +153,3 @@
   font-style: italic;
   padding: 1rem;
 }
-
-/* 🔹 REMOVER ESTILOS NO NECESARIOS para hacer más ligero */
-/* .data-grid, .landmark-card, .card-header, .label-badge, .json-view */
-/* Se pueden eliminar si no se usan en la versión optimizada */

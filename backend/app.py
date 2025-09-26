@@ -117,14 +117,14 @@ def reset():
 @app.route("/", methods=["GET"])
 def home():
     return jsonify({
-        "message": "🚀 Backend de Señas running successfully",
-        "status": "active",
+        "Mensaje": "🚀 Backend de Señas iniciado correctamente",
+        "Estado": "Activo",
         "timestamp": pd.Timestamp.now().isoformat(),
         "endpoints": {
             "landmarks_data": "/api/landmarks",
-            "progress": "/progress",
-            "train": "/train",
-            "predict": "/predict",
+            "progreso": "/progress",
+            "entrenamiento": "/train",
+            "prediccion": "/predict",
             "health": "/health"
         }
     })

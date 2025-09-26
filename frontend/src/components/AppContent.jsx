@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import HandCapture from "../HandCapture";
-import { saveLandmark, getProgress, trainModel, predict, resetAll } from "../assets/api";
+import { saveLandmark, getProgress, trainModel, predict, resetAll } from "../api";
 import "../App.css";
 
 function AppContent({ onClose }) {

@@ -19,7 +19,7 @@ const HandCapture = ({ onResults }) => {
 
       if (results.multiHandLandmarks) {
         for (const landmarks of results.multiHandLandmarks) {
-          drawFullHandNetwork(ctx, landmarks);
+          drawHand(ctx, landmarks);
         }
       }
 
@@ -55,31 +55,36 @@ const HandCapture = ({ onResults }) => {
     };
   }, [cameraStarted, onResults]);
 
-  // 🔹 Dibuja red completa (conexiones entre todos los puntos)
-  const drawFullHandNetwork = (ctx, landmarks) => {
+  const connections = [
+    [0,1],[1,2],[2,3],[3,4],
+    [0,5],[5,6],[6,7],[7,8],
+    [0,9],[9,10],[10,11],[11,12],
+    [0,13],[13,14],[14,15],[15,16],
+    [0,17],[17,18],[18,19],[19,20]
+  ];
+
+  const drawHand = (ctx, landmarks) => {
     ctx.strokeStyle = "#26c4c4ff"; // líneas celestes
     ctx.fillStyle = "#26c2c2ff";   // puntos celestes
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 2;
 
-    // Conectar todos los puntos entre sí
-    for (let i = 0; i < landmarks.length; i++) {
-      for (let j = i + 1; j < landmarks.length; j++) {
-        const start = landmarks[i];
-        const end = landmarks[j];
-        ctx.beginPath();
-        ctx.moveTo(start.x * ctx.canvas.width, start.y * ctx.canvas.height);
-        ctx.lineTo(end.x * ctx.canvas.width, end.y * ctx.canvas.height);
-        ctx.stroke();
-      }
-    }
+    // dibujar conexiones
+    connections.forEach(([startIdx, endIdx]) => {
+      const start = landmarks[startIdx];
+      const end = landmarks[endIdx];
+      ctx.beginPath();
+      ctx.moveTo(start.x * ctx.canvas.width, start.y * ctx.canvas.height);
+      ctx.lineTo(end.x * ctx.canvas.width, end.y * ctx.canvas.height);
+      ctx.stroke();
+    });
 
-    // Dibujar puntos
+    // dibujar puntos
     landmarks.forEach((landmark) => {
       ctx.beginPath();
       ctx.arc(
         landmark.x * ctx.canvas.width,
         landmark.y * ctx.canvas.height,
-        4,
+        5,
         0,
         2 * Math.PI
       );
@@ -88,18 +93,17 @@ const HandCapture = ({ onResults }) => {
   };
 
   return (
-    <div className="hand-capture-wrapper" style={{ position: "relative" }}>
+    <div className="hand-capture-wrapper">
       <video
         ref={videoRef}
         autoPlay
         playsInline
-        style={{ width: "100%", borderRadius: "12px", display: "none" }}
+        style={{ width: "100%", borderRadius: "12px" }}
       />
       <canvas
         ref={canvasRef}
         width={640}
         height={480}
-        style={{ width: "100%", borderRadius: "12px" }}
       />
     </div>
   );

@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os, csv
+import pandas as pd
 from ml.trainer import train_model, load_model
 from ml.predictor import predict_landmark
 
@@ -34,12 +35,150 @@ if not os.path.exists(DATA_FILE):
 # Cargar modelo si existe
 model = load_model()
 
-#Mensaje para saber que el backend esta iniciado
-@app.route('/')
-def home():
-    return jsonify({"estado": "Backend iniciado correctamente"})
 
 # Guardar muestra
+
+# 🔹 Ruta principal para verificar que el backend está corriendo
+@app.route("/", methods=["GET"])
+def home():
+    return jsonify({
+        "message": "🚀 Backend de Señas running successfully",
+        "status": "active",
+        "timestamp": pd.Timestamp.now().isoformat(),
+        "endpoints": {
+            "landmarks_data": "/api/landmarks",
+            "progress": "/progress",
+            "train": "/train",
+            "predict": "/predict",
+            "health": "/health"
+        }
+    })
+
+# 🔹 Health check para Render
+@app.route("/health", methods=["GET"])
+def health_check():
+    # Contar muestras totales
+    total_samples = 0
+    label_counts = {}
+    try:
+        with open(DATA_FILE, mode="r") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                label = row["label"]
+                label_counts[label] = label_counts.get(label, 0) + 1
+                total_samples += 1
+    except:
+        pass
+    
+    return jsonify({
+        "status": "healthy",
+        "database_file_exists": os.path.exists(DATA_FILE),
+        "model_loaded": model is not None,
+        "statistics": {
+            "total_samples": total_samples,
+            "labels_count": len(label_counts),
+            "samples_per_label": label_counts
+        },
+        "timestamp": pd.Timestamp.now().isoformat()
+    })
+
+# 🔹 API para obtener todos los landmarks en JSON
+@app.route("/api/landmarks", methods=["GET"])
+def get_landmarks():
+    try:
+        landmarks_data = []
+        with open(DATA_FILE, mode="r") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                landmarks_data.append(row)
+        
+        # Estadísticas adicionales
+        label_counts = {}
+        for row in landmarks_data:
+            label = row["label"]
+            label_counts[label] = label_counts.get(label, 0) + 1
+        
+        return jsonify({
+            "success": True,
+            "count": len(landmarks_data),
+            "statistics": {
+                "total_samples": len(landmarks_data),
+                "labels_count": len(label_counts),
+                "samples_per_label": label_counts
+            },
+            "data": landmarks_data
+        })
+    except Exception as e:
+        return jsonify({"error": f"Error reading landmarks: {str(e)}"}), 500
+
+# 🔹 API para obtener resumen estadístico
+@app.route("/api/landmarks/summary", methods=["GET"])
+def get_landmarks_summary():
+    try:
+        label_counts = {}
+        total_samples = 0
+        
+        with open(DATA_FILE, mode="r") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                label = row["label"]
+                label_counts[label] = label_counts.get(label, 0) + 1
+                total_samples += 1
+        
+        return jsonify({
+            "success": True,
+            "summary": {
+                "total_samples": total_samples,
+                "unique_labels": len(label_counts),
+                "labels": label_counts
+            }
+        })
+    except Exception as e:
+        return jsonify({"error": f"Error reading summary: {str(e)}"}), 500
+
+# 🔹 API para obtener muestras de una etiqueta específica
+@app.route("/api/landmarks/label/<label_name>", methods=["GET"])
+def get_landmarks_by_label(label_name):
+    try:
+        landmarks_data = []
+        with open(DATA_FILE, mode="r") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                if row["label"] == label_name:
+                    landmarks_data.append(row)
+        
+        return jsonify({
+            "success": True,
+            "label": label_name,
+            "count": len(landmarks_data),
+            "data": landmarks_data
+        })
+    except Exception as e:
+        return jsonify({"error": f"Error reading landmarks for label {label_name}: {str(e)}"}), 500
+
+# 🔹 API para descargar datos en formato estructurado
+@app.route("/api/landmarks/export", methods=["GET"])
+def export_landmarks():
+    try:
+        landmarks_data = []
+        with open(DATA_FILE, mode="r") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                landmarks_data.append(row)
+        
+        return jsonify({
+            "success": True,
+            "format": "json",
+            "count": len(landmarks_data),
+            "data": landmarks_data
+        })
+    except Exception as e:
+        return jsonify({"error": f"Error exporting landmarks: {str(e)}"}), 500
+
+# Tus rutas existentes (guardar, progress, train, predict, reset) se mantienen igual...
+# [Mantén todo el código existente de estas rutas]
+
+# Guardar muestra (existente)
 @app.route("/save_landmark", methods=["POST"])
 def save_landmark():
     data = request.json
@@ -72,7 +211,7 @@ def save_landmark():
 
     return jsonify({"message": f"✅ Muestra guardada para '{label}'", "total": count + 1})
 
-# Progreso
+# Progreso (existente)
 @app.route("/progress", methods=["GET"])
 def progress():
     result = {}
@@ -83,7 +222,7 @@ def progress():
             result[lbl] = result.get(lbl, 0) + 1
     return jsonify(result)
 
-# Entrenar
+# Entrenar (existente)
 @app.route("/train", methods=["POST"])
 def train():
     global model
@@ -94,7 +233,7 @@ def train():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Predecir
+# Predecir (existente)
 @app.route("/predict", methods=["POST"])
 def predict():
     global model
@@ -118,7 +257,7 @@ def predict():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Resetear todo
+# Resetear todo (existente)
 @app.route("/reset", methods=["POST"])
 def reset():
     global model

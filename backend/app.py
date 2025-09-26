@@ -14,6 +14,7 @@ CORS(app, resources={r"/*": {"origins": [
     "https://senias-rodrigo-front.onrender.com",# frontend de rodrigo 
     "https://senias-sebas-frontend.onrender.com",#frontend de sebas 
     "https://senias-jesus-front.onrender.com",  # frontend de jesús
+
 ]}})
 
 DATA_DIR = "data"

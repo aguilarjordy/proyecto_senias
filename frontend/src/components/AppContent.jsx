@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import HandCapture from "../HandCapture";
 import { saveLandmark, getProgress, trainModel, predict, resetAll } from "../assets/api";
-import "../assets/App.css";
+import "../App.css";
 
 function AppContent({ onClose }) {
   const [label, setLabel] = useState("");

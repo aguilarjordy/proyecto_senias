@@ -44,26 +44,41 @@ def save_landmark():
     - 2 manos = 126 valores.
     Siempre se normaliza a 126 valores (si falta, se rellena con 0s).
     """
-    data = request.json
-    label = data.get("label")
-    landmarks = data.get("landmarks")
+    try:
+        data = request.json
+        label = data.get("label")
+        landmarks = data.get("landmarks")
 
-    if not label or not landmarks:
-        return jsonify({"error": "Etiqueta o landmarks faltantes"}), 400
+        if not label or not landmarks:
+            return jsonify({"error": "Etiqueta o landmarks faltantes"}), 400
 
-    all_landmarks_flat = []
-    for hand in landmarks[:2]:  # máximo 2 manos
-        for lm in hand:
-            all_landmarks_flat.extend([lm["x"], lm["y"], lm["z"]])
+        all_landmarks_flat = []
+        for hand in landmarks[:2]:  # máximo 2 manos
+            for lm in hand:
+                # 🔹 Aseguramos que existan las keys x,y,z
+                if not all(k in lm for k in ("x", "y", "z")):
+                    return jsonify({
+                        "error": f"Landmark inválido: {lm}"
+                    }), 400
+                all_landmarks_flat.extend([lm["x"], lm["y"], lm["z"]])
 
-    # Rellenar si hay menos de 2 manos
-    while len(all_landmarks_flat) < 126:
-        all_landmarks_flat.append(0.0)
+        # 🔹 Rellenar si hay menos de 2 manos
+        while len(all_landmarks_flat) < 126:
+            all_landmarks_flat.append(0.0)
 
-    result = data_manager.save_landmark(label, all_landmarks_flat)
-    if "error" in result:
-        return jsonify(result), 500
-    return jsonify(result)
+        # 🔹 Guardar
+        result = data_manager.save_landmark(label, all_landmarks_flat)
+        if "error" in result:
+            return jsonify(result), 500
+        return jsonify(result)
+
+    except Exception as e:
+        import traceback
+        return jsonify({
+            "error": str(e),
+            "trace": traceback.format_exc()
+        }), 500
+
 
 
 @app.route("/progress", methods=["GET"])

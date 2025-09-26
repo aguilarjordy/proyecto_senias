@@ -5,7 +5,7 @@ import Features from "./components/Features";
 import Footer from "./components/Footer";
 import Modal from "./components/Modal";
 import AppContent from "./components/AppContent";
-import "./assets/App.css";
+import "./src/App.css";
 
 function App() {
   const [showModal, setShowModal] = useState(false);

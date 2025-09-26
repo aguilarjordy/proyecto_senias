@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { getLandmarksSummary, getBackendStatus } from "./api";
-import "./LandmarksViewer.css"; // 🔹 Usamos tu CSS existente
+import "./LandmarksViewers.css"; // 🔹 Usamos tu CSS existente
 
 const LandmarksViewer = () => {
   const [summary, setSummary] = useState(null);

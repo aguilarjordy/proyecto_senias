@@ -1,81 +1,90 @@
+# app.py - Adaptado para soportar dinámicamente 1 o 2 manos (63 o 126 landmarks)
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import os, csv
+import os
+import pandas as pd
 from ml.trainer import train_model, load_model
 from ml.predictor import predict_landmark
+from ml.data_manager import DataManager  # Clase para gestionar CSV y dataset
 
+# Inicialización Flask
 app = Flask(__name__)
 # Permitir múltiples URLs de frontends
 CORS(app, resources={r"/*": {"origins": [
     "http://localhost:5173",       # frontend local
-    "https://senias-main-front.onrender.com",  # frontend de main en Render 
-    "https://senias-edu-front.onrender.com"  # frontend de edu en render
+    "https://senias-main-front.onrender.com"  # frontend de main en Render 
 ]}})
 
 DATA_DIR = "data"
 DATA_FILE = os.path.join(DATA_DIR, "landmarks.csv")
 MODEL_PATH = "model.pkl"
 
-os.makedirs(DATA_DIR, exist_ok=True)
+# Inicializar DataManager y modelo
+data_manager = DataManager(DATA_FILE)
+model = load_model(MODEL_PATH)
 
-# 🔹 Crear archivo CSV si no existe
-if not os.path.exists(DATA_FILE):
-    with open(DATA_FILE, mode="w", newline="") as f:
-        writer = csv.writer(f)
-        # 21 puntos x 3 coordenadas = 63 features
-        header = [f"f{i}" for i in range(63)] + ["label"]
-        writer.writerow(header)
 
-# Cargar modelo si existe
-model = load_model()
+# ==========================
+#   ENDPOINTS
+# ==========================
 
-# Guardar muestra
 @app.route("/save_landmark", methods=["POST"])
 def save_landmark():
-    data = request.json
-    label = data.get("label")
-    landmarks = data.get("landmarks")
+    """
+    Recibe landmarks de 1 o 2 manos.
+    - 1 mano = 21 puntos * 3 coords = 63 valores.
+    - 2 manos = 126 valores.
+    Siempre se normaliza a 126 valores (si falta, se rellena con 0s).
+    """
+    try:
+        data = request.json
+        label = data.get("label")
+        landmarks = data.get("landmarks")
 
-    if not label or not landmarks:
-        return jsonify({"error": "Etiqueta o landmarks faltantes"}), 400
+        if not label or not landmarks:
+            return jsonify({"error": "Etiqueta o landmarks faltantes"}), 400
 
-    # Contar muestras existentes de esta etiqueta
-    count = 0
-    with open(DATA_FILE, mode="r") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            if row["label"] == label:
-                count += 1
+        all_landmarks_flat = []
+        for hand in landmarks[:2]:  # máximo 2 manos
+            for lm in hand:
+                # 🔹 Aseguramos que existan las keys x,y,z
+                if not all(k in lm for k in ("x", "y", "z")):
+                    return jsonify({
+                        "error": f"Landmark inválido: {lm}"
+                    }), 400
+                all_landmarks_flat.extend([lm["x"], lm["y"], lm["z"]])
 
-    if count >= 100:
-        return jsonify({"message": f"❌ Ya tienes 100 muestras para '{label}'"}), 400
+        # 🔹 Rellenar si hay menos de 2 manos
+        while len(all_landmarks_flat) < 126:
+            all_landmarks_flat.append(0.0)
 
-    # 🔹 Aplanar landmarks antes de guardar
-    landmarks_flat = []
-    for lm in landmarks:
-        landmarks_flat.extend([lm["x"], lm["y"], lm["z"]])
+        # 🔹 Guardar
+        result = data_manager.save_landmark(label, all_landmarks_flat)
+        if "error" in result:
+            return jsonify(result), 500
+        return jsonify(result)
 
-    # Guardar nueva muestra
-    with open(DATA_FILE, mode="a", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow(landmarks_flat + [label])
+    except Exception as e:
+        import traceback
+        return jsonify({
+            "error": str(e),
+            "trace": traceback.format_exc()
+        }), 500
 
-    return jsonify({"message": f"✅ Muestra guardada para '{label}'", "total": count + 1})
 
-# Progreso
+
 @app.route("/progress", methods=["GET"])
 def progress():
-    result = {}
-    with open(DATA_FILE, mode="r") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            lbl = row["label"]
-            result[lbl] = result.get(lbl, 0) + 1
+    """Devuelve el progreso (conteo de muestras por etiqueta)."""
+    result = data_manager.get_progress()
+    if "error" in result:
+        return jsonify(result), 500
     return jsonify(result)
 
-# Entrenar
+
 @app.route("/train", methods=["POST"])
 def train():
+    """Entrena un nuevo modelo con los datos actuales."""
     global model
     try:
         result = train_model(DATA_FILE, MODEL_PATH)
@@ -84,9 +93,12 @@ def train():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Predecir
+
 @app.route("/predict", methods=["POST"])
 def predict():
+    """
+    Recibe landmarks de 1 o 2 manos y predice la clase.
+    """
     global model
     data = request.json
     landmarks = data.get("landmarks")
@@ -97,31 +109,32 @@ def predict():
     if model is None:
         return jsonify({"error": "Modelo no entrenado aún"}), 400
 
-    # 🔹 Aplanar landmarks para la predicción
-    landmarks_flat = []
-    for lm in landmarks:
-        landmarks_flat.extend([lm["x"], lm["y"], lm["z"]])
+    all_landmarks_flat = []
+    for hand in landmarks[:2]:
+        for lm in hand:
+            all_landmarks_flat.extend([lm["x"], lm["y"], lm["z"]])
+
+    while len(all_landmarks_flat) < 126:
+        all_landmarks_flat.append(0.0)
 
     try:
-        result = predict_landmark(model, landmarks_flat)
+        result = predict_landmark(model, all_landmarks_flat)
         return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Resetear todo
+
 @app.route("/reset", methods=["POST"])
 def reset():
+    """
+    Reinicia los datos y el modelo.
+    """
     global model
     try:
-        # borrar dataset
-        if os.path.exists(DATA_FILE):
-            os.remove(DATA_FILE)
-        with open(DATA_FILE, mode="w", newline="") as f:
-            writer = csv.writer(f)
-            header = [f"f{i}" for i in range(63)] + ["label"]
-            writer.writerow(header)
+        result = data_manager.reset_data()
+        if "error" in result:
+            return jsonify(result), 500
 
-        # borrar modelo
         if os.path.exists(MODEL_PATH):
             os.remove(MODEL_PATH)
 
@@ -130,5 +143,72 @@ def reset():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
+@app.route("/", methods=["GET"])
+def home():
+    return jsonify({
+        "Mensaje": "🚀 Backend de Señas iniciado correctamente",
+        "Estado": "Activo",
+        "timestamp": pd.Timestamp.now().isoformat(),
+        "endpoints": {
+            "guardar_landmarks": "/save_landmark",
+            "progreso": "/progress",
+            "entrenamiento": "/train",
+            "prediccion": "/predict",
+            "resetear": "/reset",
+            "health": "/health",
+            "landmarks_data": "/api/landmarks"
+        }
+    })
+
+
+@app.route("/health", methods=["GET"])
+def health_check():
+    """Revisa estado del backend, dataset y modelo."""
+    progress_data = data_manager.get_progress()
+    return jsonify({
+        "status": "healthy",
+        "database_file_exists": os.path.exists(DATA_FILE),
+        "model_loaded": model is not None,
+        "statistics": {
+            "total_samples": sum(progress_data.values()) if isinstance(progress_data, dict) else 0,
+            "labels_count": len(progress_data) if isinstance(progress_data, dict) else 0,
+            "samples_per_label": progress_data if isinstance(progress_data, dict) else {}
+        },
+        "timestamp": pd.Timestamp.now().isoformat()
+    })
+
+
+# ==========================
+#   EXTRA: LANDMARKS DATA
+# ==========================
+
+@app.route("/api/landmarks", methods=["GET"])
+def get_landmarks():
+    result = data_manager.get_landmarks_data()
+    if "error" in result:
+        return jsonify(result), 500
+    return jsonify(result)
+
+
+@app.route("/api/landmarks/summary", methods=["GET"])
+def get_landmarks_summary():
+    result = data_manager.get_landmarks_summary()
+    if "error" in result:
+        return jsonify(result), 500
+    return jsonify(result)
+
+
+@app.route("/api/landmarks/label/<label_name>", methods=["GET"])
+def get_landmarks_by_label(label_name):
+    result = data_manager.get_landmarks_by_label(label_name)
+    if "error" in result:
+        return jsonify(result), 500
+    return jsonify(result)
+
+
+# ==========================
+#   MAIN
+# ==========================
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))

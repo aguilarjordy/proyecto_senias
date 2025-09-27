@@ -9,8 +9,8 @@ __pycache__/
 
 # Archivos de entorno
 .env
-*.env
+*.env.local
 
 # Archivos de node (si usas React/Vite en frontend)
 frontend/node_modules/
-dist/
+frontend/dist/

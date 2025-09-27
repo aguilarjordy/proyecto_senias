@@ -1,3 +1,4 @@
+// src/HandCapture.jsx
 import React, { useRef, useEffect, useState } from "react";
 import { Hands } from "@mediapipe/hands";
 import { Camera } from "@mediapipe/camera_utils";
@@ -5,30 +6,42 @@ import { Camera } from "@mediapipe/camera_utils";
 const HandCapture = ({ onResults }) => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+  const cameraRef = useRef(null);
   const [cameraStarted, setCameraStarted] = useState(false);
+  const [handCount, setHandCount] = useState(0);
 
   useEffect(() => {
     const handleResults = (results) => {
-      if (onResults) onResults(results.multiHandLandmarks?.[0] || null);
+      // results.multiHandLandmarks => array de manos (cada una: array de 21 puntos)
+      const handsArray = results.multiHandLandmarks || [];
+      setHandCount(handsArray.length);
+      // Enviar SOLO LA PRIMERA MANO (backend espera 21 landmarks)
+      const firstHand = handsArray.length > 0 ? handsArray[0] : null;
+      if (onResults) onResults(firstHand);
 
+      // Dibujo en canvas
       const canvas = canvasRef.current;
+      if (!canvas) return;
       const ctx = canvas.getContext("2d");
       ctx.save();
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+      if (results.image) {
+        ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+      }
 
-      if (results.multiHandLandmarks) {
-        for (const landmarks of results.multiHandLandmarks) {
-          drawHand(ctx, landmarks);
-        }
+      if (handsArray.length > 0) {
+        // dibujar cada mano con color diferente (solo visual)
+        const colors = ["#26c4c4ff", "#ff6b6bff"];
+        handsArray.forEach((landmarks, idx) => {
+          drawHand(ctx, landmarks, colors[idx % colors.length]);
+        });
       }
 
       ctx.restore();
     };
 
     const hands = new Hands({
-      locateFile: (file) =>
-        `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
     });
 
     hands.setOptions({
@@ -41,17 +54,22 @@ const HandCapture = ({ onResults }) => {
     hands.onResults(handleResults);
 
     if (videoRef.current && !cameraStarted) {
-      const camera = new Camera(videoRef.current, {
+      cameraRef.current = new Camera(videoRef.current, {
         onFrame: async () => await hands.send({ image: videoRef.current }),
         width: 640,
         height: 480,
       });
-      camera.start();
+      cameraRef.current.start();
       setCameraStarted(true);
     }
 
     return () => {
-      hands.close();
+      try {
+        hands.close();
+      } catch (e) {}
+      if (cameraRef.current && cameraRef.current.stop) {
+        try { cameraRef.current.stop(); } catch (e) {}
+      }
     };
   }, [cameraStarted, onResults]);
 
@@ -63,48 +81,65 @@ const HandCapture = ({ onResults }) => {
     [0,17],[17,18],[18,19],[19,20]
   ];
 
-  const drawHand = (ctx, landmarks) => {
-    ctx.strokeStyle = "#26c4c4ff"; // líneas celestes
-    ctx.fillStyle = "#26c2c2ff";   // puntos celestes
+  const drawHand = (ctx, landmarks, color = "#26c4c4ff") => {
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
     ctx.lineWidth = 2;
 
-    // dibujar conexiones
-    connections.forEach(([startIdx, endIdx]) => {
-      const start = landmarks[startIdx];
-      const end = landmarks[endIdx];
-      ctx.beginPath();
-      ctx.moveTo(start.x * ctx.canvas.width, start.y * ctx.canvas.height);
-      ctx.lineTo(end.x * ctx.canvas.width, end.y * ctx.canvas.height);
-      ctx.stroke();
+    connections.forEach(([s,e]) => {
+      const a = landmarks[s], b = landmarks[e];
+      if (a && b) {
+        ctx.beginPath();
+        ctx.moveTo(a.x * ctx.canvas.width, a.y * ctx.canvas.height);
+        ctx.lineTo(b.x * ctx.canvas.width, b.y * ctx.canvas.height);
+        ctx.stroke();
+      }
     });
 
-    // dibujar puntos
-    landmarks.forEach((landmark) => {
-      ctx.beginPath();
-      ctx.arc(
-        landmark.x * ctx.canvas.width,
-        landmark.y * ctx.canvas.height,
-        5,
-        0,
-        2 * Math.PI
-      );
-      ctx.fill();
+    landmarks.forEach(lm => {
+      if (lm) {
+        ctx.beginPath();
+        ctx.arc(lm.x * ctx.canvas.width, lm.y * ctx.canvas.height, 5, 0, 2*Math.PI);
+        ctx.fill();
+      }
     });
   };
 
   return (
-    <div className="hand-capture-wrapper">
+    <div className="hand-capture-wrapper" style={{ position: "relative" }}>
       <video
         ref={videoRef}
         autoPlay
         playsInline
+        muted
         style={{ width: "100%", borderRadius: "12px" }}
       />
       <canvas
         ref={canvasRef}
         width={640}
         height={480}
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          pointerEvents: "none",
+          width: "100%",
+          height: "auto",
+          borderRadius: "12px"
+        }}
       />
+      <div style={{
+        position: "absolute",
+        top: "10px",
+        right: "10px",
+        background: "rgba(0,0,0,0.7)",
+        color: "white",
+        padding: "5px 10px",
+        borderRadius: "5px",
+        fontSize: "12px"
+      }}>
+        Manos: <strong>{handCount}</strong>/2
+      </div>
     </div>
   );
 };

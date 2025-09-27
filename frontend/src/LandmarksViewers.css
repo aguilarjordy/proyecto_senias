@@ -1,0 +1,155 @@
+/* LandmarksViewer.css - Adaptado y consistente con App.css */
+.landmarks-viewer {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 1.2rem;
+  margin: 1.5rem 0;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  max-height: 600px;
+  overflow: hidden;
+}
+
+.viewer-header {
+  text-align: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.viewer-header h2 {
+  color: #2563eb;
+  margin-bottom: 0.3rem;
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+.refresh-btn {
+  background: #10b981;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: 0.2s ease;
+}
+
+.refresh-btn:hover {
+  background: #059669;
+}
+
+.status-card {
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 10px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+}
+
+.status-card h3 {
+  color: #0369a1;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+}
+
+/* Tabs navegación */
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  justify-content: center;
+}
+
+.tabs button {
+  background: #f3f4f6;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.2s ease;
+}
+
+.tabs button.active {
+  background: #2563eb;
+  color: white;
+}
+
+/* Estadísticas grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.stat-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 1rem;
+  text-align: center;
+}
+
+.stat-number {
+  font-size: 1.6rem;
+  font-weight: bold;
+  color: #2563eb;
+  display: block;
+}
+
+/* Lista de labels */
+.labels-list {
+  margin-top: 1rem;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.label-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.6rem;
+  padding: 0.5rem;
+  background: #f9fafb;
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+
+.label-name {
+  font-weight: 600;
+  min-width: 80px;
+}
+
+.label-count {
+  color: #6b7280;
+  min-width: 80px;
+}
+
+.progress-bar {
+  flex: 1;
+  background: #e5e7eb;
+  border-radius: 4px;
+  height: 8px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  background: #10b981;
+  height: 100%;
+}
+
+.loading {
+  text-align: center;
+  padding: 1.5rem;
+  color: #6b7280;
+}
+
+.no-data {
+  text-align: center;
+  color: #6b7280;
+  font-style: italic;
+  padding: 1rem;
+}

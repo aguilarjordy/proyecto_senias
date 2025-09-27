@@ -1,56 +1,18 @@
-import React, { useState } from 'react';
-import SenialIACategorySelection from './SenialIACategorySelection';
-import SenialIAAbecedarioContent from './SenialIAAbecedarioContent';
-import SenialIANumerosContent from './SenialIANumerosContent';
-import SenialIASignosContent from './SenialIASignosContent';
+import React from "react";
 
-const SenialIAAppContainer = ({ onClose }) => {
-  const [currentView, setCurrentView] = useState('category-selection');
-
-  const handleSelectCategory = (category) => {
-    setCurrentView(category);
-  };
-
-  const handleBackToCategories = () => {
-    setCurrentView('category-selection');
-  };
-
-  const renderContent = () => {
-    switch (currentView) {
-      case 'abecedario':
-        return <SenialIAAbecedarioContent onBack={handleBackToCategories} />;
-      case 'numeros':
-        return <SenialIANumerosContent onBack={handleBackToCategories} />;
-      case 'signos':
-        return <SenialIASignosContent onBack={handleBackToCategories} />;
-      default:
-        return <SenialIACategorySelection onSelectCategory={handleSelectCategory} />;
-    }
-  };
-
+function SenialIAAppContainer({ onClose }) {
   return (
-    <div className="fixed inset-0 z-50 bg-white overflow-auto senialia-app-container">
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 senialia-app-bg">
-        <div className="container mx-auto p-4">
-          <header className="py-4 mb-8 senialia-app-header">
-            <div className="flex justify-between items-center">
-              <div className="text-2xl font-bold text-blue-800 flex items-center senialia-app-title">
-                <i className="fas fa-hands mr-2"></i> SeñalIA
-              </div>
-              <button 
-                onClick={onClose}
-                className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-full senialia-app-close-btn"
-              >
-                <i className="fas fa-times"></i>
-              </button>
-            </div>
-          </header>
-          
-          {renderContent()}
-        </div>
-      </div>
+    <div className="fixed inset-0 bg-gray-900 bg-opacity-90 flex flex-col items-center justify-center text-white z-50">
+      <h2 className="text-3xl font-bold mb-4">📹 SeñalIA en acción</h2>
+      <p className="mb-6">Aquí se carga la aplicación de detección en tiempo real.</p>
+      <button
+        onClick={onClose}
+        className="px-6 py-2 bg-red-600 rounded-lg hover:bg-red-700 transition"
+      >
+        Cerrar
+      </button>
     </div>
   );
-};
+}
 
 export default SenialIAAppContainer;

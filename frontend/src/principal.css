@@ -1,65 +1,50 @@
-/* principal.css */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
-
-body {
-  font-family: 'Inter', sans-serif;
-  margin: 0;
-  padding: 0;
-}
-
-/* Estilos específicos para SeñalIA */
+/* Fondo general con un degradado sutil */
 .senialia-gradient-bg {
-  background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+  background: linear-gradient(to bottom right, #f0f9ff, #e0f2fe, #dbeafe);
 }
 
-.senialia-hero-bg {
-  background: linear-gradient(135deg, rgba(30, 58, 138, 0.9) 0%, rgba(59, 130, 246, 0.9) 100%), 
-              url('https://images.unsplash.com/photo-1584697964358-3e14ca57658b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80');
-  background-size: cover;
-  background-position: center;
+/* Animación de entrada suave */
+.fade-in {
+  animation: fadeIn 0.8s ease-in-out;
 }
 
-.senialia-glass-effect {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.senialia-feature-card {
-  transition: all 0.3s ease;
+/* Animación para botones (leve escalado) */
+.btn-animate {
+  transition: transform 0.2s ease, box-shadow 0.3s ease;
 }
 
-.senialia-feature-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+.btn-animate:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.15);
 }
 
-.senialia-cta-pulse {
-  animation: senialia-pulse 2s infinite;
+/* Tarjetas (features) */
+.card-hover {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
-@keyframes senialia-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
-  70% { box-shadow: 0 0 0 15px rgba(59, 130, 246, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+.card-hover:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12);
 }
 
-.senialia-hand-animation {
-  animation: senialia-hand-float 3s ease-in-out infinite;
+/* Modal con animación */
+.modal-animate {
+  animation: popIn 0.4s ease;
 }
 
-@keyframes senialia-hand-float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
 }
 
-.senialia-category-card {
-  transition: all 0.3s ease;
-  cursor: pointer;
-}
-
-.senialia-category-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+/* Estilo para footer */
+footer p {
+  font-family: 'Inter', sans-serif;
+  letter-spacing: 0.2px;
 }

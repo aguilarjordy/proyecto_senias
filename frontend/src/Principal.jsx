@@ -30,10 +30,12 @@ function Principal() {
   };
 
   return (
-    <div className="min-h-screen senialia-gradient-bg">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-blue-50 to-blue-100">
       <SenialIAHeader onOpenApp={handleOpenApp} />
-      <SenialIAHero onOpenApp={handleOpenApp} />
-      <SenialIAFeatures />
+      <main className="flex-grow">
+        <SenialIAHero onOpenApp={handleOpenApp} />
+        <SenialIAFeatures />
+      </main>
       <SenialIAFooter />
       
       {showRedirectModal && (

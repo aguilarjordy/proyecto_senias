@@ -68,7 +68,7 @@ function App() {
     } catch {
       setMessage("❌ Error al cargar progreso");
     }
-  };
+  };6
 
   // ✅ Entrenar modelo
   const handleTrain = async () => {

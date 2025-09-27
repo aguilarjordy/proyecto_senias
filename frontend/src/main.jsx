@@ -1,8 +1,8 @@
 // main.jsx - Punto de entrada de la aplicación
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import '../principal.css';
-import Principal from '../principal.jsx';
+import './principal.css';
+import Principal from './principal.jsx';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(

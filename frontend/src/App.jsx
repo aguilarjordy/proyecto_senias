@@ -14,7 +14,7 @@ import "./App.css";
 
 function App() {
   const [label, setLabel] = useState("");
-  const [lastLandmarks, setLastLandmarks] = useState(null); // espera: array de 21 {x,y,z}
+  const [lastLandmarks, setLastLandmarks] = useState(null);
   const [progress, setProgress] = useState({});
   const [trainInfo, setTrainInfo] = useState(null);
   const [prediction, setPrediction] = useState(null);
@@ -27,7 +27,6 @@ function App() {
   const captureInterval = useRef(null);
   const progressUpdateRef = useRef(0);
 
-  // onResults ahora recibe una sola mano (o null)
   const handleLandmarksDetected = useCallback((handLandmarks) => {
     if (!isResetting) {
       setLastLandmarks(handLandmarks || null);
@@ -51,7 +50,6 @@ function App() {
         console.warn("Backend status error:", st.error);
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const saveSample = async () => {
@@ -76,7 +74,6 @@ function App() {
         z: Math.round(lm.z * 1000) / 1000
       }));
 
-      // ✅ CORREGIDO: ya no se envuelve en otro array
       const data = await saveLandmark(label, [optimizedLandmarks]);
 
       if (data && !data.error && data.message) {
@@ -143,7 +140,12 @@ function App() {
         setTrainInfo(data);
         setMessage(data.message || "✅ Entrenamiento finalizado");
       } else {
-        setMessage(`❌ ${data?.error || "Error en entrenamiento"}`);
+        // 🔹 Aquí se maneja el caso de un solo label
+        if (data?.error?.includes("solo una clase") || data?.error?.includes("1 clase")) {
+          setMessage("⚠️ Necesitas al menos 2 etiquetas diferentes para entrenar el modelo.");
+        } else {
+          setMessage(`❌ ${data?.error || "Error en entrenamiento"}`);
+        }
       }
       fetchProgress();
     } catch (e) {

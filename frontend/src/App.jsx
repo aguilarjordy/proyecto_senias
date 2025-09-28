@@ -77,7 +77,7 @@ function App() {
       }));
 
       // ✅ CORREGIDO: ya no se envuelve en otro array
-      const data = await saveLandmark(label, optimizedLandmarks);
+      const data = await saveLandmark(label, [optimizedLandmarks]);
 
       if (data && !data.error && data.message) {
         setCaptureCount(prev => prev + 1);

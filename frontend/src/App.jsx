@@ -39,13 +39,11 @@ function App() {
     if (res && !res.error) {
       setProgress(res);
     } else {
-      // res puede ser { error: "..."}
       console.error("Error al obtener progreso:", res?.error);
     }
   };
 
   useEffect(() => {
-    // al iniciar intenta obtener progreso y estado del backend
     fetchProgress();
     (async () => {
       const st = await getBackendStatus();
@@ -59,7 +57,6 @@ function App() {
   const saveSample = async () => {
     if (!label || !lastLandmarks || isResetting) return;
 
-    // validación: debe ser array de 21 puntos
     if (!Array.isArray(lastLandmarks) || lastLandmarks.length !== 21) {
       console.warn("Landmarks inválidos (se esperaban 21 puntos).", lastLandmarks);
       return;
@@ -73,13 +70,13 @@ function App() {
     if (!isValid) return;
 
     try {
-      // reducir decimales para enviar menos payload
       const optimizedLandmarks = lastLandmarks.map(lm => ({
         x: Math.round(lm.x * 1000) / 1000,
         y: Math.round(lm.y * 1000) / 1000,
         z: Math.round(lm.z * 1000) / 1000
       }));
 
+      // ✅ CORREGIDO: ya no se envuelve en otro array
       const data = await saveLandmark(label, optimizedLandmarks);
 
       if (data && !data.error && data.message) {
@@ -97,7 +94,6 @@ function App() {
           fetchProgress();
         }
       } else {
-        // error desde backend o red
         const errMsg = data?.error || "Respuesta inesperada del servidor";
         setMessage(`❌ ${errMsg}`);
         stopAutoCapture();
@@ -124,7 +120,6 @@ function App() {
     progressUpdateRef.current = 0;
     setMessage(`▶️ Captura iniciada para '${label}'`);
 
-    // guardamos cada 1.2s para dar estabilidad
     captureInterval.current = setInterval(saveSample, 1200);
   };
 
@@ -198,7 +193,6 @@ function App() {
       } else {
         setMessage(`❌ ${data?.error || "Error al resetear"}`);
       }
-      // pequeña espera para que el backend re-cree CSV
       setTimeout(() => {
         setIsResetting(false);
         fetchProgress();

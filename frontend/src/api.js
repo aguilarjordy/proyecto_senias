@@ -1,5 +1,5 @@
 // src/api.js
-const API_URL = import.meta.env.VITE_API_URL || "https://senias_jordy_back.onrender.com";
+const API_URL = import.meta.env.VITE_API_URL;
 
 /**
  * Petición centralizada con timeout y manejo uniforme de errores.

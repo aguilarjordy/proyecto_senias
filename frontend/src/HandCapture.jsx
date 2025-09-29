@@ -1,63 +1,73 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, forwardRef, useImperativeHandle } from "react";
 import { Hands } from "@mediapipe/hands";
 import { Camera } from "@mediapipe/camera_utils";
 
-const HandCapture = ({ onResults }) => {
+const HandCapture = forwardRef(({ onResults }, ref) => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const cameraRef = useRef(null);
-  const [cameraStarted, setCameraStarted] = useState(false);
+  const handsRef = useRef(null);
   const [handCount, setHandCount] = useState(0);
 
-  useEffect(() => {
-    const handleResults = (results) => {
-      const handsArray = results.multiHandLandmarks || [];
-      setHandCount(handsArray.length);
+  // Exponer función para reiniciar cámara desde App.jsx
+  useImperativeHandle(ref, () => ({
+    resetCamera: () => {
+      if (cameraRef.current?.stop) cameraRef.current.stop();
+      initCamera();
+    }
+  }));
 
-      // Enviar al parent (1 o 2 manos)
-      if (onResults) onResults(handsArray.slice(0, 2));
+  const handleResults = (results) => {
+    const handsArray = results.multiHandLandmarks || [];
+    setHandCount(handsArray.length);
 
-      // Dibujar en canvas
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const ctx = canvas.getContext("2d");
-      ctx.save();
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      if (results.image) ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+    if (onResults) onResults(handsArray.slice(0, 2));
 
-      if (handsArray.length > 0) {
-        const colors = ["#26c4c4ff", "#ff6b6bff"];
-        handsArray.forEach((landmarks, idx) => drawHand(ctx, landmarks, colors[idx % colors.length]));
-      }
-      ctx.restore();
-    };
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    ctx.save();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (results.image) ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
 
-    const hands = new Hands({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
+    if (handsArray.length > 0) {
+      const colors = ["#26c4c4ff", "#ff6b6bff"];
+      handsArray.forEach((landmarks, idx) => drawHand(ctx, landmarks, colors[idx % colors.length]));
+    }
+    ctx.restore();
+  };
 
+  const initCamera = () => {
+    if (handsRef.current) handsRef.current.close();
+    const hands = new Hands({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+    });
     hands.setOptions({
       maxNumHands: 2,
       modelComplexity: 1,
       minDetectionConfidence: 0.7,
       minTrackingConfidence: 0.7,
     });
-
     hands.onResults(handleResults);
+    handsRef.current = hands;
 
-    if (videoRef.current && !cameraStarted) {
+    if (videoRef.current) {
       cameraRef.current = new Camera(videoRef.current, {
         onFrame: async () => await hands.send({ image: videoRef.current }),
         width: 640,
         height: 480,
       });
       cameraRef.current.start();
-      setCameraStarted(true);
     }
+  };
 
+  useEffect(() => {
+    initCamera();
     return () => {
-      try { hands.close(); } catch {}
-      if (cameraRef.current?.stop) try { cameraRef.current.stop(); } catch {}
+      if (handsRef.current) handsRef.current.close();
+      if (cameraRef.current?.stop) cameraRef.current.stop();
     };
-  }, [cameraStarted, onResults]);
+  }, []);
 
   const connections = [
     [0,1],[1,2],[2,3],[3,4],
@@ -71,7 +81,6 @@ const HandCapture = ({ onResults }) => {
     ctx.strokeStyle = color;
     ctx.fillStyle = color;
     ctx.lineWidth = 2;
-
     connections.forEach(([s,e]) => {
       const a = landmarks[s], b = landmarks[e];
       if (a && b) {
@@ -81,7 +90,6 @@ const HandCapture = ({ onResults }) => {
         ctx.stroke();
       }
     });
-
     landmarks.forEach(lm => {
       if (lm) {
         ctx.beginPath();
@@ -100,6 +108,6 @@ const HandCapture = ({ onResults }) => {
       </div>
     </div>
   );
-};
+});
 
 export default HandCapture;

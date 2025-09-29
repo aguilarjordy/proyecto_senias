@@ -1,5 +1,5 @@
 import React from "react";
-import styles from "./Footer.module.css";
+import "./Footer.css"; // Importa estilos globales
 
 /**
  * Footer - Pie de página del sitio
@@ -8,7 +8,7 @@ import styles from "./Footer.module.css";
  */
 const Footer = () => {
   return (
-    <footer className={styles.footer} role="contentinfo">
+    <footer className="footer" role="contentinfo">
       <p>
         © {new Date().getFullYear()} - Proyecto React | Todos los derechos reservados
       </p>

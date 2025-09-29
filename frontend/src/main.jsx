@@ -2,7 +2,7 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
-import AppRouter from "./AppRouter"; // fíjate en mayúsculas: nombre exacto del archivo
+import AppRouter from "./appRouter"; // fíjate en mayúsculas: nombre exacto del archivo
 
 const rootElement = document.getElementById("root");
 

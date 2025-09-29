@@ -1,19 +1,36 @@
-// AppRouter.jsx
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Landing from "./Landing.jsx";// 🌄 LandingPage
-import App from "./App.jsx"; // 🤖 Tu aplicación principal
+// src/AppRouter.jsx
+import React from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
+
+// Pages
+import Inicio from "./pages/Inicio";
+import Captura from "./pages/Captura";
+import Entrenamiento from "./pages/Entrenamiento";
+import Practicas from "./pages/Practicas";
 
 function AppRouter() {
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* 🏠 Ruta inicial = LandingPage */}
-        <Route path="/" element={<Landing />} />
+    <Router>
+      <div className="app-layout">
+        {/* 🔹 Barra de navegación */}
+        <Navbar />
 
-        {/* 🚀 Ruta de la app principal */}
-        <Route path="/app" element={<App />} />
-      </Routes>
-    </BrowserRouter>
+        {/* 🔹 Contenido principal */}
+        <main className="main-container">
+          <Routes>
+            <Route path="/" element={<Inicio />} />
+            <Route path="/captura" element={<Captura />} />
+            <Route path="/entrenamiento" element={<Entrenamiento />} />
+            <Route path="/practicas" element={<Practicas />} />
+          </Routes>
+        </main>
+
+        {/* 🔹 Pie de página */}
+        <Footer />
+      </div>
+    </Router>
   );
 }
 

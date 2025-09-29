@@ -14,7 +14,7 @@ import "./App.css";
 
 function App() {
   const [label, setLabel] = useState("");
-  const [lastLandmarks, setLastLandmarks] = useState(null);
+  const [lastLandmarks, setLastLandmarks] = useState([]);
   const [progress, setProgress] = useState({});
   const [trainInfo, setTrainInfo] = useState(null);
   const [prediction, setPrediction] = useState(null);
@@ -23,13 +23,15 @@ function App() {
   const [isCapturing, setIsCapturing] = useState(false);
   const [captureCount, setCaptureCount] = useState(0);
   const [isResetting, setIsResetting] = useState(false);
+  const [countdown, setCountdown] = useState(null); // contador de 3 segundos
 
   const captureInterval = useRef(null);
   const progressUpdateRef = useRef(0);
 
-  const handleLandmarksDetected = useCallback((handLandmarks) => {
+  // Recibe 1 o 2 manos desde HandCapture
+  const handleLandmarksDetected = useCallback((handsArray) => {
     if (!isResetting) {
-      setLastLandmarks(handLandmarks || null);
+      setLastLandmarks(handsArray || []);
     }
   }, [isResetting]);
 
@@ -55,32 +57,32 @@ function App() {
   const saveSample = async () => {
     if (!label || !lastLandmarks || isResetting) return;
 
-    if (!Array.isArray(lastLandmarks) || lastLandmarks.length !== 21) {
-      console.warn("Landmarks inválidos (se esperaban 21 puntos).", lastLandmarks);
+    // Filtramos solo manos completas (21 landmarks cada una)
+    const handsToSend = lastLandmarks.filter(hand =>
+      Array.isArray(hand) && hand.length === 21
+    );
+
+    if (handsToSend.length === 0) {
+      console.warn("Landmarks inválidos (se esperaba al menos 1 mano completa).", lastLandmarks);
       return;
     }
 
-    const isValid = lastLandmarks.every(lm =>
-      lm && typeof lm.x === "number" && !isNaN(lm.x) &&
-      typeof lm.y === "number" && !isNaN(lm.y) &&
-      typeof lm.z === "number" && !isNaN(lm.z)
-    );
-    if (!isValid) return;
-
     try {
-      const optimizedLandmarks = lastLandmarks.map(lm => ({
-        x: Math.round(lm.x * 1000) / 1000,
-        y: Math.round(lm.y * 1000) / 1000,
-        z: Math.round(lm.z * 1000) / 1000
-      }));
+      const optimizedHands = handsToSend.map(hand =>
+        hand.map(lm => ({
+          x: Math.round(lm.x * 1000) / 1000,
+          y: Math.round(lm.y * 1000) / 1000,
+          z: Math.round(lm.z * 1000) / 1000
+        }))
+      );
 
-      const data = await saveLandmark(label, [optimizedLandmarks]);
+      const data = await saveLandmark(label, optimizedHands);
 
       if (data && !data.error && data.message) {
-        setCaptureCount(prev => prev + 1);
+        setCaptureCount(prev => prev + optimizedHands.length);
         setMessage(data.message);
 
-        progressUpdateRef.current += 1;
+        progressUpdateRef.current += optimizedHands.length;
         if (progressUpdateRef.current % 5 === 0) {
           fetchProgress();
         }
@@ -103,21 +105,12 @@ function App() {
   };
 
   const startAutoCapture = () => {
-    if (!label) {
-      setMessage("⚠️ Ingresa una etiqueta primero");
-      return;
-    }
-    if (isResetting) {
-      setMessage("⚠️ Espera a que termine el reset");
-      return;
-    }
-
     setIsCapturing(true);
     setCaptureCount(0);
     progressUpdateRef.current = 0;
     setMessage(`▶️ Captura iniciada para '${label}'`);
 
-    captureInterval.current = setInterval(saveSample, 1200);
+    captureInterval.current = setInterval(saveSample, 300);
   };
 
   const stopAutoCapture = useCallback(() => {
@@ -127,6 +120,45 @@ function App() {
       captureInterval.current = null;
     }
   }, []);
+
+  const startCountdown = (action) => {
+    setCountdown(3);
+    let seconds = 3;
+    const interval = setInterval(() => {
+      seconds -= 1;
+      if (seconds > 0) {
+        setCountdown(seconds);
+      } else {
+        clearInterval(interval);
+        setCountdown(null);
+        action();
+      }
+    }, 1000);
+  };
+
+  const startAutoCaptureWithCountdown = () => {
+    if (!label) {
+      setMessage("⚠️ Ingresa una etiqueta primero");
+      return;
+    }
+    if (isResetting) {
+      setMessage("⚠️ Espera a que termine el reset");
+      return;
+    }
+    startCountdown(startAutoCapture);
+  };
+
+  const handlePredictWithCountdown = () => {
+    if (!lastLandmarks || lastLandmarks.length === 0) {
+      setMessage("⚠️ No hay landmarks detectados");
+      return;
+    }
+    if (isResetting) {
+      setMessage("⚠️ Espera a que termine el reset");
+      return;
+    }
+    startCountdown(handlePredict);
+  };
 
   const handleTrain = async () => {
     if (isResetting) {
@@ -140,7 +172,6 @@ function App() {
         setTrainInfo(data);
         setMessage(data.message || "✅ Entrenamiento finalizado");
       } else {
-        // 🔹 Aquí se maneja el caso de un solo label
         if (data?.error?.includes("solo una clase") || data?.error?.includes("1 clase")) {
           setMessage("⚠️ Necesitas al menos 2 etiquetas diferentes para entrenar el modelo.");
         } else {
@@ -155,7 +186,7 @@ function App() {
   };
 
   const handlePredict = async () => {
-    if (!lastLandmarks) {
+    if (!lastLandmarks || lastLandmarks.length === 0) {
       setMessage("⚠️ No hay landmarks detectados");
       return;
     }
@@ -189,7 +220,7 @@ function App() {
         setTrainInfo(null);
         setPrediction(null);
         setCaptureCount(0);
-        setLastLandmarks(null);
+        setLastLandmarks([]);
         setLabel("");
         setMessage(data.message || "✅ Datos reseteados");
       } else {
@@ -216,6 +247,12 @@ function App() {
 
       <HandCapture onResults={handleLandmarksDetected} />
 
+      {countdown !== null && (
+        <div className="countdown">
+          ⏱️ {countdown}...
+        </div>
+      )}
+
       <section className="actions">
         <input
           type="text"
@@ -226,14 +263,16 @@ function App() {
         />
 
         {!isCapturing ? (
-          <button onClick={startAutoCapture} disabled={!label || isResetting}>▶️ Captura rápida</button>
+          <button onClick={startAutoCaptureWithCountdown} disabled={!label || isResetting}>
+            ▶️ Captura rápida
+          </button>
         ) : (
           <button className="stop" onClick={stopAutoCapture}>⏹️ Detener captura</button>
         )}
 
         <button onClick={fetchProgress} disabled={isResetting}>📊 Ver progreso</button>
         <button onClick={handleTrain} disabled={isResetting}>⚡ Entrenar modelo</button>
-        <button onClick={handlePredict} disabled={isResetting}>🤖 Predecir</button>
+        <button onClick={handlePredictWithCountdown} disabled={isResetting}>🤖 Predecir</button>
 
         <button
           onClick={() => setShowViewer(!showViewer)}
@@ -250,7 +289,9 @@ function App() {
 
       {message && <p className="message">{message}</p>}
       {isCapturing && (
-        <p className="capturing">⏺️ Capturando... {captureCount}/100 {lastLandmarks ? '✅ Detectados' : '❌ Esperando mano'}</p>
+        <p className="capturing">
+          ⏺️ Capturando... {captureCount} {lastLandmarks.length > 0 ? '✅ Detectados' : '❌ Esperando mano'}
+        </p>
       )}
 
       <section className="results">

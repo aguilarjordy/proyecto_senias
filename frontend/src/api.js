@@ -1,9 +1,7 @@
-// src/api.js
 const API_URL = import.meta.env.VITE_API_URL;
 
 /**
  * Petición centralizada con timeout y manejo uniforme de errores.
- * Devuelve el JSON si todo OK, o { error: "mensaje" } en caso de fallo.
  */
 async function request(path, options = {}) {
   const url = API_URL + (path.startsWith("/") ? path : "/" + path);
@@ -19,7 +17,6 @@ async function request(path, options = {}) {
     const contentType = res.headers.get("content-type") || "";
 
     if (!res.ok) {
-      // intentar parsear JSON de error
       let body;
       try {
         body = contentType.includes("application/json") ? await res.json() : await res.text();
@@ -30,22 +27,16 @@ async function request(path, options = {}) {
       return { error: message };
     }
 
-    if (contentType.includes("application/json")) {
-      return await res.json();
-    } else {
-      const text = await res.text();
-      return { data: text };
-    }
+    if (contentType.includes("application/json")) return await res.json();
+    else return { data: await res.text() };
   } catch (err) {
     clearTimeout(id);
-    if (err.name === "AbortError") {
-      return { error: "Timeout: la petición tardó demasiado" };
-    }
+    if (err.name === "AbortError") return { error: "Timeout: la petición tardó demasiado" };
     return { error: err.message || "Error de red" };
   }
 }
 
-/* --- Exported API functions --- */
+/* --- Funciones exportadas --- */
 export async function saveLandmark(label, landmarks) {
   return request("/save_landmark", {
     method: "POST",
@@ -60,14 +51,16 @@ export async function getProgress() {
 }
 
 export async function trainModel() {
-  return request("/train", { method: "POST", timeout: 120000 }); // training puede tardar
+  return request("/train", { method: "POST", timeout: 120000 });
 }
 
-export async function predict(landmarks) {
+// Función predict actualizada
+export async function predict(handsArray) {
+  const payload = { landmarks: handsArray.slice(0, 2) }; // máximo 2 manos
   return request("/predict", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ landmarks }),
+    body: JSON.stringify(payload),
     timeout: 10000
   });
 }

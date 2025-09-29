@@ -1,4 +1,3 @@
-// src/HandCapture.jsx
 import React, { useRef, useEffect, useState } from "react";
 import { Hands } from "@mediapipe/hands";
 import { Camera } from "@mediapipe/camera_utils";
@@ -12,37 +11,28 @@ const HandCapture = ({ onResults }) => {
 
   useEffect(() => {
     const handleResults = (results) => {
-      // results.multiHandLandmarks => array de manos (cada una: array de 21 puntos)
       const handsArray = results.multiHandLandmarks || [];
       setHandCount(handsArray.length);
-      // Enviar SOLO LA PRIMERA MANO (backend espera 21 landmarks)
-      const firstHand = handsArray.length > 0 ? handsArray[0] : null;
-      if (onResults) onResults(firstHand);
 
-      // Dibujo en canvas
+      // Enviar al parent (1 o 2 manos)
+      if (onResults) onResults(handsArray.slice(0, 2));
+
+      // Dibujar en canvas
       const canvas = canvasRef.current;
       if (!canvas) return;
       const ctx = canvas.getContext("2d");
       ctx.save();
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      if (results.image) {
-        ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
-      }
+      if (results.image) ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
 
       if (handsArray.length > 0) {
-        // dibujar cada mano con color diferente (solo visual)
         const colors = ["#26c4c4ff", "#ff6b6bff"];
-        handsArray.forEach((landmarks, idx) => {
-          drawHand(ctx, landmarks, colors[idx % colors.length]);
-        });
+        handsArray.forEach((landmarks, idx) => drawHand(ctx, landmarks, colors[idx % colors.length]));
       }
-
       ctx.restore();
     };
 
-    const hands = new Hands({
-      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
-    });
+    const hands = new Hands({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
 
     hands.setOptions({
       maxNumHands: 2,
@@ -64,12 +54,8 @@ const HandCapture = ({ onResults }) => {
     }
 
     return () => {
-      try {
-        hands.close();
-      } catch (e) {}
-      if (cameraRef.current && cameraRef.current.stop) {
-        try { cameraRef.current.stop(); } catch (e) {}
-      }
+      try { hands.close(); } catch {}
+      if (cameraRef.current?.stop) try { cameraRef.current.stop(); } catch {}
     };
   }, [cameraStarted, onResults]);
 
@@ -81,7 +67,7 @@ const HandCapture = ({ onResults }) => {
     [0,17],[17,18],[18,19],[19,20]
   ];
 
-  const drawHand = (ctx, landmarks, color = "#26c4c4ff") => {
+  const drawHand = (ctx, landmarks, color="#26c4c4ff") => {
     ctx.strokeStyle = color;
     ctx.fillStyle = color;
     ctx.lineWidth = 2;
@@ -106,38 +92,10 @@ const HandCapture = ({ onResults }) => {
   };
 
   return (
-    <div className="hand-capture-wrapper" style={{ position: "relative" }}>
-      <video
-        ref={videoRef}
-        autoPlay
-        playsInline
-        muted
-        style={{ width: "100%", borderRadius: "12px" }}
-      />
-      <canvas
-        ref={canvasRef}
-        width={640}
-        height={480}
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          pointerEvents: "none",
-          width: "100%",
-          height: "auto",
-          borderRadius: "12px"
-        }}
-      />
-      <div style={{
-        position: "absolute",
-        top: "10px",
-        right: "10px",
-        background: "rgba(0,0,0,0.7)",
-        color: "white",
-        padding: "5px 10px",
-        borderRadius: "5px",
-        fontSize: "12px"
-      }}>
+    <div style={{ position: "relative" }}>
+      <video ref={videoRef} autoPlay playsInline muted style={{ width: "100%", borderRadius: "12px" }} />
+      <canvas ref={canvasRef} width={640} height={480} style={{ position: "absolute", top:0, left:0, pointerEvents:"none", width:"100%", height:"auto", borderRadius:"12px" }} />
+      <div style={{ position:"absolute", top:"10px", right:"10px", background:"rgba(0,0,0,0.7)", color:"white", padding:"5px 10px", borderRadius:"5px", fontSize:"12px" }}>
         Manos: <strong>{handCount}</strong>/2
       </div>
     </div>

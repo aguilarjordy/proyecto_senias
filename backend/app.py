@@ -106,37 +106,42 @@ def train():
 def predict():
     """
     Recibe landmarks de 1 o 2 manos y predice la clase.
+    Siempre se rellenan hasta 126 valores si hay menos.
     """
     global model
     try:
         data = request.json
         landmarks = data.get("landmarks")
 
-        if not landmarks:
-            return jsonify({"error": "Faltan landmarks"}), 400
+        # Validación básica
+        if not landmarks or not isinstance(landmarks, list):
+            return jsonify({"error": "Faltan landmarks o formato incorrecto"}), 400
 
         if model is None:
             return jsonify({"error": "Modelo no entrenado aún"}), 400
 
-        # 🔹 Procesar landmarks (máx. 2 manos)
+        # Procesar y aplanar
         all_landmarks_flat = []
         for hand in landmarks[:2]:
+            if not isinstance(hand, list):
+                return jsonify({"error": f"Formato de mano inválido: {hand}"}), 400
             for lm in hand:
+                if not isinstance(lm, dict) or not all(k in lm for k in ("x","y","z")):
+                    return jsonify({"error": f"Landmark inválido: {lm}"}), 400
                 all_landmarks_flat.extend([lm["x"], lm["y"], lm["z"]])
 
-        # 🔹 Asegurar siempre 126 valores (42 puntos * 3 coords)
+        # Rellenar si hay menos de 126 valores
         while len(all_landmarks_flat) < 126:
             all_landmarks_flat.append(0.0)
 
-        # 🔹 Intentar predecir
+        # Predecir
         result = predict_landmark(model, all_landmarks_flat)
         return jsonify(result)
 
     except Exception as e:
         import traceback
-        error_message = str(e)
-        traceback.print_exc()  # 👀 Esto se verá en logs de Render
-        return jsonify({"error": f"Error en /predict: {error_message}"}), 500
+        traceback.print_exc()
+        return jsonify({"error": f"Error en /predict: {str(e)}"}), 500
 
 
 @app.route("/reset", methods=["POST"])

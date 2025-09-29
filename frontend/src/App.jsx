@@ -162,7 +162,6 @@ function App() {
       const data = await predict(lastLandmarks);
       if (data && !data.error) {
         setPrediction(data);
-        setMessage("🤖 Predicción realizada");
         return data;
       } else {
         setMessage(`❌ ${data?.error || "Error en predicción"}`);
@@ -185,7 +184,7 @@ function App() {
     }
   };
 
-  const handlePredictWithCountdown = (forOperation=false) => {
+  const handlePredictWithCountdown = (forOperation = false) => {
     if (!lastLandmarks || lastLandmarks.length === 0) {
       setMessage("⚠️ No hay landmarks detectados");
       return;
@@ -196,7 +195,11 @@ function App() {
     }
     startCountdown(async () => {
       const pred = await handlePredict();
-      if (forOperation && pred && !pred.error) addToOperation(pred);
+      if (forOperation && pred && !pred.error) {
+        addToOperation(pred);
+      } else if (!forOperation && pred && !pred.error) {
+        setMessage(`🤖 Predicción: ${pred.prediction} (${(pred.confidence * 100).toFixed(1)}%)`);
+      }
     });
   };
 
@@ -319,9 +322,17 @@ function App() {
 
         <button onClick={fetchProgress} disabled={isResetting}>📊 Ver progreso</button>
         <button onClick={handleTrain} disabled={isResetting}>⚡ Entrenar modelo</button>
+
+        {/* Botón separado para predecir */}
+        <button onClick={() => handlePredictWithCountdown(false)} disabled={isResetting}>
+          🔮 Predecir
+        </button>
+
+        {/* Botón para agregar a operación */}
         <button onClick={() => handlePredictWithCountdown(true)} disabled={isResetting}>
           🔢 Agregar a operación
         </button>
+
         <button onClick={calculateOperation} disabled={operationSequence.length < 3}>🧮 Calcular operación</button>
         <button onClick={() => {setOperationSequence([]); setOperationResult(null);}}>🔄 Reiniciar operación</button>
 

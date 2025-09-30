@@ -14,10 +14,14 @@ body {
   justify-content: center;
   align-items: flex-start;
   padding: 2rem;
+  /* CORRECCIÓN: Oculta el contenido que se desborda horizontalmente */
+  overflow-x: hidden; 
 }
 
 /* === Contenedor principal === */
 .container {
+  /* ESTA REGLA SOLO APLICA AL CONTENEDOR DE TU CONTENIDO PRINCIPAL, 
+     NO AL CONTAINER DE BOOTSTRAP */
   width: 100%;
   max-width: 1100px;
   background: #ffffff;
@@ -195,6 +199,32 @@ canvas {
   50% {
     opacity: 0.5;
   }
+}
+
+/* === Hover animado en links === */
+.nav-link {
+  position: relative;
+  transition: color 0.3s ease;
+}
+
+.nav-link:hover {
+  color: #3b82f6 !important; /* Azul Bootstrap */
+}
+
+.nav-link::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0%;
+  height: 2px;
+  background: #3b82f6;
+  transition: width 0.3s ease;
+}
+
+.nav-link:hover::after,
+.nav-link.active::after {
+  width: 100%;
 }
 
 /* === Responsive === */

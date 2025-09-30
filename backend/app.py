@@ -12,6 +12,7 @@ app = Flask(__name__)
 CORS(app, resources={r"/*": {
     "origins": [
         "http://localhost:5173",
+        "http://localhost:5174",
         "https://senias-main-front.onrender.com",
         "https://senias-jordy-front.onrender.com",
         "https://senias-edu-front.onrender.com",

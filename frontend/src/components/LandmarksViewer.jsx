@@ -1,6 +1,6 @@
 // src/LandmarksViewer.jsx
 import React, { useState, useEffect, useCallback } from "react";
-import { getLandmarksSummary, getBackendStatus } from "./api";
+import { getLandmarksSummary, getBackendStatus } from "../api";
 import "./LandmarksViewers.css";
 
 const LandmarksViewer = () => {

@@ -24,8 +24,8 @@ a:hover {
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
+  /* CORRECCIÓN: Se eliminaron 'display: flex;' y 'place-items: center;' 
+     para permitir que el contenido de Bootstrap ocupe el 100% del ancho. */
   min-width: 320px;
   min-height: 100vh;
 }

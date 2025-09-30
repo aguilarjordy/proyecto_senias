@@ -1,5 +1,7 @@
 import React, { useRef, useEffect, useState, forwardRef, useImperativeHandle } from "react";
-import { Hands } from "@mediapipe/hands";
+// 🎯 CORRECCIÓN CLAVE: Importamos todo el módulo de Hands como 'MP_HANDS'
+// para evitar el error "is not a constructor" en entornos como Vite/Render.
+import * as MP_HANDS from "@mediapipe/hands"; 
 import { Camera } from "@mediapipe/camera_utils";
 
 // Usamos forwardRef para permitir que el componente padre (Capturar.jsx)
@@ -52,7 +54,8 @@ const HandCapture = forwardRef(({ onResults }, ref) => {
         if (handsRef.current) handsRef.current.close();
         
         // 1. Inicializa MediaPipe Hands
-        const hands = new Hands({
+        // 🎯 Uso de la importación corregida: MP_HANDS.Hands
+        const hands = new MP_HANDS.Hands({ 
             locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
         });
         hands.setOptions({

@@ -1,6 +1,5 @@
 import React, { useRef, useEffect, useState, forwardRef, useImperativeHandle } from "react";
-// 🎯 CORRECCIÓN CLAVE: Importamos todo el módulo de Hands como 'MP_HANDS'
-// para evitar el error "is not a constructor" en entornos como Vite/Render.
+// Importamos todo el módulo de Hands como 'MP_HANDS' para acceder a la clase Hands.
 import * as MP_HANDS from "@mediapipe/hands"; 
 import { Camera } from "@mediapipe/camera_utils";
 
@@ -24,6 +23,10 @@ const HandCapture = forwardRef(({ onResults }, ref) => {
         }
     }));
 
+    /**
+     * Procesa los resultados del modelo de MediaPipe y dibuja en el canvas.
+     * @param {Object} results - Resultados del modelo Hands.
+     */
     const handleResults = (results) => {
         const handsArray = results.multiHandLandmarks || [];
         setHandCount(handsArray.length);
@@ -38,7 +41,7 @@ const HandCapture = forwardRef(({ onResults }, ref) => {
         ctx.save();
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        // Dibuja la imagen de la cámara en el canvas
+        // Dibuja la imagen de la cámara en el canvas (necesario para la visualización)
         if (results.image) ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
 
         // Dibuja los landmarks de las manos
@@ -49,15 +52,19 @@ const HandCapture = forwardRef(({ onResults }, ref) => {
         ctx.restore();
     };
 
+    /**
+     * Inicializa el modelo de Hands y la conexión con la cámara.
+     */
     const initCamera = () => {
         // Cierra instancias previas para evitar conflictos
         if (handsRef.current) handsRef.current.close();
         
         // 1. Inicializa MediaPipe Hands
-        // 🎯 Uso de la importación corregida: MP_HANDS.Hands
+        // SOLUCIÓN CLAVE PARA RENDER: Usar locateFile con la CDN pública
         const hands = new MP_HANDS.Hands({ 
             locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
         });
+        
         hands.setOptions({
             maxNumHands: 2,
             modelComplexity: 1,
@@ -70,6 +77,7 @@ const HandCapture = forwardRef(({ onResults }, ref) => {
         // 2. Inicializa MediaPipe Camera Utility
         if (videoRef.current) {
             cameraRef.current = new Camera(videoRef.current, {
+                // Envía la imagen de la cámara al modelo de hands para el procesamiento
                 onFrame: async () => await hands.send({ image: videoRef.current }),
                 width: 640,
                 height: 480,
@@ -82,6 +90,7 @@ const HandCapture = forwardRef(({ onResults }, ref) => {
     useEffect(() => {
         initCamera();
         return () => {
+            // Limpieza al desmontar el componente
             if (handsRef.current) handsRef.current.close();
             if (cameraRef.current?.stop) cameraRef.current.stop();
         };
@@ -89,8 +98,8 @@ const HandCapture = forwardRef(({ onResults }, ref) => {
 
     // Conexiones de los 21 puntos para dibujar la estructura de la mano
     const connections = [
-        [0,1],[1,2],[2,3],[3,4],   // Pulgar
-        [0,5],[5,6],[6,7],[7,8],   // Índice
+        [0,1],[1,2],[2,3],[3,4],      // Pulgar
+        [0,5],[5,6],[6,7],[7,8],      // Índice
         [0,9],[9,10],[10,11],[11,12], // Medio
         [0,13],[13,14],[14,15],[15,16], // Anular
         [0,17],[17,18],[18,19],[19,20], // Meñique
@@ -124,24 +133,21 @@ const HandCapture = forwardRef(({ onResults }, ref) => {
     };
 
     return (
-        <div style={{ position: "relative" }}>
+        <div style={{ position: "relative", maxWidth: 640, margin: 'auto' }}>
             {/* Elemento de video oculto que captura el stream de la webcam */}
             <video ref={videoRef} autoPlay playsInline muted 
                 style={{ 
-                    // Se usa transform: scaleX(-1) para invertir la imagen (vista espejo)
                     transform: "scaleX(-1)", 
                     width: "100%", 
                     borderRadius: "12px",
-                    display: 'none' // Lo ocultamos para mostrar solo el canvas
+                    // IMPORTANTE: Mantenemos el video oculto para dibujar solo en el canvas
+                    display: 'none' 
                 }} 
             />
             {/* Elemento canvas que dibuja la imagen de fondo y los landmarks */}
             <canvas ref={canvasRef} width={640} height={480} 
                 style={{ 
-                    position: "absolute", 
-                    top:0, 
-                    left:0, 
-                    pointerEvents:"none", 
+                    position: "relative", 
                     width:"100%", 
                     height:"auto", 
                     borderRadius:"12px",
@@ -151,8 +157,8 @@ const HandCapture = forwardRef(({ onResults }, ref) => {
             />
             
             {/* Overlay de contador de manos */}
-            <div style={{ position:"absolute", top:"10px", right:"10px", background:"rgba(0,0,0,0.7)", color:"white", padding:"5px 10px", borderRadius:"5px", fontSize:"12px" }}>
-                Manos: <strong>{handCount}</strong>/2
+            <div style={{ position:"absolute", top:"20px", left:"20px", background:"rgba(0,0,0,0.7)", color:"white", padding:"5px 10px", borderRadius:"5px", fontSize:"14px" }}>
+                Manos detectadas: <strong>{handCount}</strong>/2
             </div>
         </div>
     );

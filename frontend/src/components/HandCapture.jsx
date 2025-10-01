@@ -39,7 +39,6 @@ const HandCapture = forwardRef(({ onResults }, ref) => {
   const initCamera = () => {
     if (handsRef.current) handsRef.current.close();
 
-    // 👇 Usa la clase global de la librería CDN
     const hands = new window.Hands({
       locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
     });

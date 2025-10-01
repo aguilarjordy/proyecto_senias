@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { predict } from "../api";
 import HandCapture from "../components/HandCapture";
 
@@ -9,20 +9,87 @@ export default function Practicar() {
   const [operationSequence, setOperationSequence] = useState([]);
   const [operationResult, setOperationResult] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // 🚀 ESTADO PARA ALMACENAR LA VOZ ALTERNATIVA SELECCIONADA
+  const [spanishVoice, setSpanishVoice] = useState(null);
 
   const isOperator = (token) => ['+', '-', '*', '/'].includes(token);
   const isNumber = (token) => !isNaN(Number(token)) && Number.isInteger(Number(token)) && Number(token) >= 0 && Number(token) <= 9;
+
+  /**
+   * Carga las voces disponibles en el navegador y selecciona una voz alternativa en español.
+   */
+  useEffect(() => {
+    if ('speechSynthesis' in window) {
+      const loadVoices = () => {
+        const availableVoices = window.speechSynthesis.getVoices();
+        
+        // 1. Filtrar solo voces en español
+        const esVoices = availableVoices.filter(v => v.lang.startsWith('es'));
+        
+        if (esVoices.length > 0) {
+          // 2. Intentar buscar una voz con nombre específico o que no sea la predeterminada
+          const alternateVoice = esVoices.find(v => 
+              v.name.includes('Spain') || 
+              v.name.includes('Mexican') ||
+              v.name.includes('Jorge') || 
+              v.name.includes('Elena') ||
+              v.default === false 
+          ) || esVoices[0]; // Si no encuentra ninguna especial, usa la primera disponible.
+          
+          setSpanishVoice(alternateVoice);
+        }
+      };
+
+      // Listener para asegurar que las voces se carguen cuando estén listas
+      if (window.speechSynthesis.onvoiceschanged !== undefined) {
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+      }
+      loadVoices(); // Intenta cargar inmediatamente
+    }
+  }, []);
+
+  /**
+   * Función para reproducir texto utilizando la voz alternativa seleccionada.
+   */
+  const speak = (text) => {
+    if ('speechSynthesis' in window) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      
+      // 🚀 ASIGNA LA VOZ AL OBJETO UTTERANCE
+      if (spanishVoice) {
+          utterance.voice = spanishVoice;
+          utterance.lang = spanishVoice.lang;
+      } else {
+          // Fallback si no hay voz específica
+          utterance.lang = 'es-ES'; 
+      }
+      
+      utterance.rate = 1.0; 
+      
+      // Detiene cualquier voz anterior y reproduce la nueva
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
+    } else {
+      console.warn("La síntesis de voz no es compatible con este navegador.");
+    }
+  };
+
 
   const handlePredict = async () => {
     if (isLoading) return; 
 
     if (lastLandmarks.length === 0) {
-      setMessage("⚠️ Por favor, asegúrate de que tu mano sea visible y detectable.");
+      const msg = "Por favor, asegúrate de que tu mano sea visible y detectable.";
+      setMessage(`⚠️ ${msg}`);
+      speak(msg);
       return;
     }
     
     setIsLoading(true);
-    setMessage("🧠 Pidiendo predicción al modelo...");
+    const initialMsg = "Pidiendo predicción al modelo...";
+    setMessage(`🧠 ${initialMsg}`);
+    speak(initialMsg);
     setPrediction(null);
     setOperationResult(null); 
     
@@ -30,12 +97,18 @@ export default function Practicar() {
       const data = await predict(lastLandmarks);
       if (data && !data.error) {
         setPrediction(data);
+        const msg = `Predicción lista. Signo detectado: ${data.prediction}`;
         setMessage(`✅ ¡Predicción lista! Signo detectado: ${data.prediction}`);
+        speak(msg);
       } else {
-        setMessage(`❌ Error de predicción: ${data?.error || "Revisa la conexión con el servidor o si el modelo está cargado."}`);
+        const errorMsg = `Error de predicción: ${data?.error || "Revisa la conexión con el servidor o si el modelo está cargado."}`;
+        setMessage(`❌ ${errorMsg}`);
+        speak(errorMsg);
       }
     } catch (err) {
-      setMessage("❌ Fallo de red: No se pudo contactar el servicio de predicción.");
+      const errorMsg = "Fallo de red: No se pudo contactar el servicio de predicción.";
+      setMessage(`❌ ${errorMsg}`);
+      speak(errorMsg);
     } finally {
       setIsLoading(false);
     }
@@ -43,49 +116,66 @@ export default function Practicar() {
 
   const addToOperation = () => {
     if (!prediction) {
-        setMessage("⚠️ Necesitas predecir un valor o signo antes de agregarlo.");
+        const msg = "Necesitas predecir un valor o signo antes de agregarlo.";
+        setMessage(`⚠️ ${msg}`);
+        speak(msg);
         return;
     }
 
     const token = prediction.prediction;
     const seqLen = operationSequence.length;
+    let newMsg = "";
 
     if (seqLen === 0) {
         if (isNumber(token)) {
             setOperationSequence([token]);
+            newMsg = `Primer número, ${token}, agregado. Ahora, muestra un operador.`;
             setMessage(`Primer número (${token}) agregado. Ahora, muestra un operador (+, -, *, /).`);
         } else {
+            newMsg = "Error, el primer elemento debe ser un número.";
             setMessage("❌ El primer elemento debe ser un número (0-9).");
+            speak(newMsg); 
             return;
         }
     } else if (seqLen === 1) {
         if (isOperator(token)) {
             setOperationSequence((prev) => [...prev, token]);
+            newMsg = `Operador, ${token}, agregado. Ahora, muestra el segundo número.`;
             setMessage(`Operador (${token}) agregado. Ahora, muestra el segundo número (0-9).`);
         } else {
+            newMsg = "Error, el segundo elemento debe ser un operador.";
             setMessage("❌ El segundo elemento debe ser un operador (+, -, *, /).");
+            speak(newMsg); 
             return;
         }
     } else if (seqLen === 2) {
         if (isNumber(token)) {
             setOperationSequence((prev) => [...prev, token]);
+            newMsg = `Toda la secuencia está lista. Presiona el botón Calcular.`;
             setMessage(`Toda la secuencia está lista. Presiona '🧮 Calcular'.`);
         } else {
+            newMsg = "Error, el tercer elemento debe ser un número.";
             setMessage("❌ El tercer elemento debe ser un número (0-9).");
+            speak(newMsg); 
             return;
         }
     } else if (seqLen >= 3) {
+        newMsg = "La operación ya está completa. Presiona Calcular o Reiniciar.";
         setMessage("⚠️ La operación ya está completa. Presiona Calcular o Reiniciar.");
+        speak(newMsg); 
         return;
     }
 
+    if (newMsg) speak(newMsg);
     setPrediction(null);
   };
 
   const calculateOperation = () => {
     if (operationSequence.length !== 3) {
-        setMessage("⚠️ Se requiere una secuencia completa (Número, Operador, Número) para calcular.");
+        const msg = "Se requiere una secuencia completa (Número, Operador, Número) para calcular.";
+        setMessage(`⚠️ ${msg}`);
         setOperationResult(null);
+        speak(msg);
         return;
     }
     
@@ -94,8 +184,10 @@ export default function Practicar() {
     const num2 = Number(num2Str);
     
     if (!isNumber(num1Str) || !isOperator(op) || !isNumber(num2Str)) {
-        setMessage("❌ Error: La secuencia no es válida (espera: Número Operador Número).");
+        const msg = "Error, la secuencia no es válida (espera: Número Operador Número).";
+        setMessage(`❌ ${msg}`);
         setOperationResult("Error de secuencia");
+        speak(msg);
         return;
     }
     
@@ -118,7 +210,9 @@ export default function Practicar() {
     }
     
     setOperationResult(result);
-    setMessage(`✅ Cálculo finalizado: ${num1Str} ${op} ${num2Str} = ${result}`);
+    const resultMsg = `${num1Str} ${op} ${num2Str} es igual a ${result}`;
+    setMessage(`✅ Cálculo finalizado: ${resultMsg}`);
+    speak(`Cálculo finalizado. ${resultMsg}`);
   };
 
   const getTokenClass = (token) => {
@@ -140,10 +234,13 @@ export default function Practicar() {
               <div className="col-md-6">
                 <h3 className="fs-5 text-primary mb-3">Web cam </h3>
                 
-                {/* CORRECCIÓN APLICADA AQUÍ */}
+                {/* CORRECCIÓN DE ALTURA APLICADA AQUÍ: height: '480px' */}
                 <div 
                   className="mb-4 border rounded shadow-sm overflow-hidden"
-                  style={{ maxWidth: '100%', height: 'auto' }} 
+                  style={{ 
+                    maxWidth: '100%', 
+                    height: '480px' 
+                  }} 
                 >
                   <HandCapture onResults={setLastLandmarks} />
                 </div>
@@ -200,7 +297,9 @@ export default function Practicar() {
                       setOperationSequence([]);
                       setOperationResult(null);
                       setPrediction(null);
-                      setMessage("Sistema de calculadora reiniciado.");
+                      const msg = "Sistema de calculadora reiniciado.";
+                      setMessage(msg);
+                      speak(msg);
                     }}
                   >
                     🔄 Reiniciar

@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react"; // 👈 Importa useEffect
 import HandCapture from "../components/HandCapture";
 import { saveLandmark, resetAll } from "../api";
 
@@ -11,6 +11,56 @@ export default function Capturar() {
   const [message, setMessage] = useState("");
   const [isResetting, setIsResetting] = useState(false);
 
+  // 🚀 ESTADO Y EFECTO PARA LA VOZ (Copiado de la lógica de Practicar.jsx)
+  const [spanishVoice, setSpanishVoice] = useState(null);
+
+  useEffect(() => {
+    if ('speechSynthesis' in window) {
+      const loadVoices = () => {
+        const availableVoices = window.speechSynthesis.getVoices();
+        const esVoices = availableVoices.filter(v => v.lang.startsWith('es'));
+        
+        if (esVoices.length > 0) {
+          const alternateVoice = esVoices.find(v => 
+              v.name.includes('Spain') || 
+              v.name.includes('Mexican') ||
+              v.name.includes('Jorge') || 
+              v.name.includes('Elena') ||
+              v.default === false 
+          ) || esVoices[0];
+          
+          setSpanishVoice(alternateVoice);
+        }
+      };
+
+      if (window.speechSynthesis.onvoiceschanged !== undefined) {
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+      }
+      loadVoices();
+    }
+  }, []);
+
+  const speak = (text) => {
+    if ('speechSynthesis' in window) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      
+      if (spanishVoice) {
+          utterance.voice = spanishVoice;
+          utterance.lang = spanishVoice.lang;
+      } else {
+          utterance.lang = 'es-ES'; 
+      }
+      
+      utterance.rate = 1.0; 
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
+    } else {
+      console.warn("La síntesis de voz no es compatible con este navegador.");
+    }
+  };
+  // 🔚 FIN DE LA LÓGICA DE VOZ
+  
+
   const captureInterval = useRef(null);
 
   const handleLandmarksDetected = useCallback((handsArray) => {
@@ -18,27 +68,33 @@ export default function Capturar() {
   }, []);
 
   const saveSample = async () => {
-    // Si no hay etiqueta o no se detectó una mano, no guardar
     if (!label || lastLandmarks.length === 0) return;
 
     try {
       await saveLandmark(label, lastLandmarks);
       setCaptureCount((prev) => prev + 1);
     } catch {
-      setMessage("❌ Error al guardar muestra. Revisa el servidor/API.");
+      const msg = "Error al guardar muestra. Revisa el servidor/API.";
+      setMessage(`❌ ${msg}`);
+      speak(msg); // 📞 VOZ: Error de guardado
       stopAutoCapture();
     }
   };
 
   const startAutoCapture = () => {
     if (!label) {
-      setMessage("⚠️ Selecciona una etiqueta primero");
+      const msg = "Selecciona una etiqueta primero, como la letra A o el número 1.";
+      setMessage(`⚠️ ${msg}`);
+      speak(msg); // 📞 VOZ: Falta etiqueta
       return;
     }
 
     setIsCapturing(true);
     setCaptureCount(0);
-    setMessage(`▶️ Capturando ${label}... ¡Mantén la seña firme!`);
+    const startMsg = `Capturando la etiqueta ${label}. ¡Mantén la seña firme!`;
+    setMessage(`▶️ ${startMsg}`);
+    speak(startMsg); // 📞 VOZ: Inicio de captura
+
     // Intervalo de captura: 300ms
     captureInterval.current = setInterval(saveSample, 300);
   };
@@ -46,30 +102,46 @@ export default function Capturar() {
   const stopAutoCapture = () => {
     setIsCapturing(false);
     clearInterval(captureInterval.current);
-    setMessage(
-      `⏸️ Captura detenida. Total: ${captureCount} muestras guardadas para '${label}'.`
-    );
+    const stopMsg = `Captura detenida. ${captureCount} muestras guardadas para la etiqueta '${label}'.`;
+    setMessage(`⏸️ ${stopMsg}`);
+    speak(stopMsg); // 📞 VOZ: Fin de captura
   };
-
+  
   // Función para resetear todos los datos
   const handleResetAll = async () => {
-    if (!window.confirm("⚠️ ¿Estás seguro de que quieres eliminar todos los datos?")) return;
+    const confirmMsg = "¿Estás seguro de que quieres eliminar TODOS los datos de entrenamiento?";
+    if (!window.confirm(`⚠️ ${confirmMsg}`)) return;
 
     setIsResetting(true);
-    setMessage("🧹 Reiniciando datos...");
+    const initialMsg = "Reiniciando y eliminando todos los datos.";
+    setMessage(`🧹 ${initialMsg}`);
+    speak(initialMsg); // 📞 VOZ: Aviso de reinicio
 
     try {
       const res = await resetAll();
       if (res.error) throw new Error(res.error);
+      
       setCaptureCount(0);
       setLabel("");
       setLastLandmarks([]);
-      setMessage("✅ Todos los datos han sido reiniciados correctamente.");
+      const successMsg = "Todos los datos han sido reiniciados correctamente.";
+      setMessage(`✅ ${successMsg}`);
+      speak(successMsg); // 📞 VOZ: Reinicio exitoso
     } catch (err) {
-      setMessage(`❌ Error al reiniciar: ${err.message}`);
+      const errorMsg = `Error al reiniciar: ${err.message}.`;
+      setMessage(`❌ ${errorMsg}`);
+      speak(errorMsg); // 📞 VOZ: Error de reinicio
     } finally {
       setIsResetting(false);
     }
+  };
+
+  // 📞 VOZ: Al cambiar la etiqueta
+  const handleLabelChange = (newLabel) => {
+      setLabel(newLabel);
+      if (newLabel) {
+          speak(`Etiqueta seleccionada: ${newLabel}. Lista para capturar.`);
+      }
   };
 
   const labelOptions = {
@@ -97,7 +169,7 @@ export default function Capturar() {
           <div className="col-md-5 order-md-2">
             <div className="card shadow-lg border-primary">
               <div className="card-header bg-primary text-white fw-bold fs-5">
-                 Configuración de Etiquetado
+                Configuración de Etiquetado
               </div>
               <div className="card-body p-4">
                 <div className="mb-4">
@@ -108,6 +180,7 @@ export default function Capturar() {
                     onChange={(e) => {
                       setCategory(e.target.value);
                       setLabel("");
+                      speak(`Categoría cambiada a ${e.target.value}. Elige una nueva etiqueta.`); // 📞 VOZ: Cambio de categoría
                     }}
                   >
                     <option value="vocal">Vocal (A, E, I, O, U)</option>
@@ -121,7 +194,7 @@ export default function Capturar() {
                   <select
                     className="form-select form-select-lg"
                     value={label}
-                    onChange={(e) => setLabel(e.target.value)}
+                    onChange={(e) => handleLabelChange(e.target.value)} // 📞 Usa la nueva función con VOZ
                   >
                     <option value="">-- Elige la seña --</option>
                     {labelOptions[category].map((lbl) => (
@@ -178,15 +251,10 @@ export default function Capturar() {
                   className="border rounded bg-dark mb-3 overflow-hidden" 
                   style={{ 
                     width: "100%", 
-                    // Establece una relación de aspecto (4:3 en este caso)
                     paddingTop: "75%", 
                     position: "relative" 
                   }}
                 >
-                  {/*
-                    Este div envuelve a HandCapture y lo obliga a tomar el 100% del área 
-                    definida por el padding/ancho del contenedor padre.
-                  */}
                   <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
                     <HandCapture onResults={handleLandmarksDetected} />
                   </div>

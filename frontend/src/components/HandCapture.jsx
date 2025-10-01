@@ -69,14 +69,18 @@ const HandCapture = forwardRef(({ onResults }, ref) => {
     };
   }, []);
 
-  const connections = [
-    [0, 1],[1, 2],[2, 3],[3, 4],
-    [0, 5],[5, 6],[6, 7],[7, 8],
-    [0, 9],[9, 10],[10, 11],[11, 12],
-    [0, 13],[13, 14],[14, 15],[15, 16],
-    [0, 17],[17, 18],[18, 19],[19, 20],
-    [0, 17],
-  ];
+ const connections = [
+  [0,1],[1,2],[2,3],[3,4],         // Pulgar
+  [0,5],[5,6],[6,7],[7,8],         // Índice
+  [0,9],[9,10],[10,11],[11,12],    // Medio
+  [0,13],[13,14],[14,15],[15,16],  // Anular
+  [0,17],[17,18],[18,19],[19,20],  // Meñique
+
+  // 🔗 Conexiones horizontales entre nudillos
+  [5,9],   // índice ↔ medio
+  [9,13],  // medio ↔ anular
+  [13,17], // anular ↔ meñique
+];
 
   const drawHand = (ctx, landmarks, color = "#26c4c4ff") => {
     ctx.strokeStyle = color;

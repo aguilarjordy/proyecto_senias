@@ -89,37 +89,106 @@ export default function Practicar() {
   };
 
   return (
-    <div className="container mt-5">
-      <div className="card shadow-lg p-4">
-        <h1 className="text-center mb-4">ZONA DE PRÁCTICAS</h1>
+    <div className="container my-5">
+      <div className="card shadow-lg p-4 border-0 rounded-4">
+        <h1 className="text-center mb-4 text-primary fw-bold">
+          🖐 Zona de Prácticas
+        </h1>
         <div className="row g-4">
+          {/* Webcam */}
           <div className="col-md-6">
-            <h3>Webcam</h3>
-            <div className="mb-3 border rounded overflow-hidden" style={{ height: "480px" }}>
-              <HandCapture onResults={setLastLandmarks} />
+            <div className="card border-0 shadow-sm h-100">
+              <div className="card-header bg-primary text-white fw-semibold">
+                Webcam
+              </div>
+              <div className="card-body d-flex justify-content-center align-items-center">
+                <div
+                  className="border rounded w-100 overflow-hidden"
+                  style={{ height: "480px" }}
+                >
+                  <HandCapture onResults={setLastLandmarks} />
+                </div>
+              </div>
+              {prediction && (
+                <div className="alert alert-info m-3 text-center">
+                  Última predicción:{" "}
+                  <strong className="text-dark">{prediction.prediction}</strong>
+                </div>
+              )}
             </div>
-            {prediction && <p className="alert alert-info">Última: {prediction.prediction}</p>}
           </div>
-          <div className="col-md-6">
-            <h3>Controles</h3>
-            <button className="btn btn-primary me-2" onClick={handlePredict} disabled={isLoading}>
-              {isLoading ? "Analizando..." : "🤖 Predecir"}
-            </button>
-            <button className="btn btn-success me-2" onClick={addToOperation} disabled={!prediction}>
-              ➕ Agregar
-            </button>
-            <button className="btn btn-warning me-2" onClick={calculateOperation} disabled={operationSequence.length < 3}>
-              🧮 Calcular
-            </button>
-            <button className="btn btn-outline-danger" onClick={() => { setOperationSequence([]); setOperationResult(null); }}>
-              🔄 Reiniciar
-            </button>
 
-            <div className="mt-3">
-              <p>Secuencia: {operationSequence.join(" ") || "Vacía"}</p>
-              {operationResult !== null && <p className="alert alert-success">Resultado: {operationResult}</p>}
+          {/* Controles */}
+          <div className="col-md-6">
+            <div className="card border-0 shadow-sm h-100">
+              <div className="card-header bg-secondary text-white fw-semibold">
+                Controles
+              </div>
+              <div className="card-body">
+                <div className="btn-group mb-3 w-100">
+                  <button
+                    className="btn btn-primary"
+                    onClick={handlePredict}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? "⏳ Analizando..." : "🤖 Predecir"}
+                  </button>
+                  <button
+                    className="btn btn-success"
+                    onClick={addToOperation}
+                    disabled={!prediction}
+                  >
+                    ➕ Agregar
+                  </button>
+                  <button
+                    className="btn btn-warning"
+                    onClick={calculateOperation}
+                    disabled={operationSequence.length < 3}
+                  >
+                    🧮 Calcular
+                  </button>
+                  <button
+                    className="btn btn-outline-danger"
+                    onClick={() => {
+                      setOperationSequence([]);
+                      setOperationResult(null);
+                    }}
+                  >
+                    🔄 Reiniciar
+                  </button>
+                </div>
+
+                <div className="mt-3">
+                  <h5>📌 Secuencia:</h5>
+                  <p>
+                    {operationSequence.length > 0 ? (
+                      operationSequence.map((token, idx) => (
+                        <span
+                          key={idx}
+                          className="badge bg-primary me-2 fs-6"
+                        >
+                          {token}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-muted">Vacía</span>
+                    )}
+                  </p>
+
+                  {operationResult !== null && (
+                    <div className="alert alert-success text-center fs-5">
+                      ✅ Resultado: <strong>{operationResult}</strong>
+                    </div>
+                  )}
+                </div>
+
+                {message && (
+                  <div className="alert alert-dark mt-3 text-center">
+                    {message}
+                  </div>
+                )}
+              </div>
             </div>
-            {message && <div className="alert mt-2">{message}</div>}
           </div>
         </div>
       </div>
